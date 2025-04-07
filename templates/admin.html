@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Welcome Admin: {{ username }}</h1>
+  <nav>
+    <ul>
+      <li><a href="/admin/manage_users">Manage Users</a></li>
+      <li><a href="/admin/view_reports">View Reports</a></li>
+      <li><a href="{{ url_for('logout') }}">Logout</a></li>
+    </ul>
+  </nav>
+</body>
+</html>

@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Professor Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Welcome Professor: {{ username }}</h1>
+  <nav>
+    <ul>
+      <li><a href="/professor/courses">My Courses</a></li>
+      <li><a href="/professor/grade_submission">Submit Grades</a></li>
+      <li><a href="{{ url_for('logout') }}">Logout</a></li>
+    </ul>
+  </nav>
+</body>
+</html>

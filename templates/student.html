@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Student Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Welcome Student: {{ username }}</h1>
+  <nav>
+    <ul>
+      <li><a href="/student/enroll">Enroll in Courses</a></li>
+      <li><a href="/student/grades">View Grades</a></li>
+      <li><a href="{{ url_for('logout') }}">Logout</a></li>
+    </ul>
+  </nav>
+</body>
+</html>
