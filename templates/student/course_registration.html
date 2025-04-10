@@ -4,13 +4,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Dashboard</title>
-    <link rel="stylesheet" href="../../static/css/student/style.css">
+    <title>Course Registration</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/student/course_registration.css') }}">
 </head>
 
 <body>
     <header>
-        <h1>Welcome Back, <span class="student-name">{{ username }}</span>!</h1>
+        <h1>Hello, <span class="student-name">{{ username }}</span> 👋</h1>
         <div class="user-dropdown">
             <button class="dropdown-btn">
                 <div class="profile-avatar">👤</div>
@@ -19,12 +19,12 @@
             <div class="dropdown-content">
                 <a href="{{ url_for('view_profile') }}">
                     <div class="icon">👤</div>
-                    <span>Profile</span>
+                    <span>View Profile</span>
                 </a>
                 <div class="dropdown-divider"></div>
                 <a href="{{ url_for('logout') }}" class="logout-option">
                     <div class="icon">🚪</div>
-                    <span>Logout</span>
+                    <span>Log Out</span>
                 </a>
             </div>
         </div>
@@ -32,29 +32,22 @@
 
     <div class="container">
         <div class="welcome-message">
-            <h2>Your Academic Portal</h2>
-            <p>Access all your academic information and resources in one place</p>
+            <h2>Course Registration Portal</h2>
+            <p>Manage your course enrollments easily from here.</p>
         </div>
 
         <div class="dashboard">
             <div class="dashboard-item">
-                <a href="{{ url_for('view_courses') }}">
-                    <div class="icon">📚</div>
-                    <div class="title">My Courses</div>
+                <a href="{{ url_for('add_courses') }}">
+                    <div class="icon">➕</div>
+                    <div class="title">Enroll in Courses</div>
                 </a>
             </div>
 
             <div class="dashboard-item">
-                <a href="{{ url_for('course_registration') }}">
-                    <div class="icon">📝</div>
-                    <div class="title">Course Registration</div>
-                </a>
-            </div>
-
-            <div class="dashboard-item">
-                <a href="{{ url_for('view_grades') }}">
-                    <div class="icon">📊</div>
-                    <div class="title">View Grades</div>
+                <a href="{{ url_for('drop_courses') }}">
+                    <div class="icon">❌</div>
+                    <div class="title">Drop Enrolled Courses</div>
                 </a>
             </div>
         </div>

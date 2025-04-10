@@ -26,24 +26,24 @@ class PostgresqlDB:
                     result = conn.execute(text(stmnt), values)
                 else:
                     result = conn.execute(text(stmnt))
-            return result
+                return result
         except Exception as err:
-            print(f'Failed to execute dql commands -- {err}')
+            print(f'Failed to execute DQL command -- {err}')
+            return None
 
     def execute_ddl_and_dml_commands(self, stmnt, values=None):
-        connection = self.engine.connect()
-        trans = connection.begin()
-        try:
-            if values is not None:
-                result = connection.execute(text(stmnt), values)
-            else:
-                result = connection.execute(text(stmnt))
-            trans.commit()
-            connection.close()
-            print('Command executed successfully.')
-        except Exception as err:
-            trans.rollback()
-            print(f'Failed to execute ddl and dml commands -- {err}')
+        with self.engine.connect() as connection:
+            trans = connection.begin()
+            try:
+                if values is not None:
+                    connection.execute(text(stmnt), values)
+                else:
+                    connection.execute(text(stmnt))
+                trans.commit()
+                print('Command executed successfully.')
+            except Exception as err:
+                trans.rollback()
+                print(f'Failed to execute DDL/DML command -- {err}')
 
 # --- DB Credentials ---
 USER_NAME = 'postgres'
@@ -79,7 +79,6 @@ def login():
             if username == 'admin' and password == 'admin':
                 session['role'] = 'admin'
                 session['username'] = username
-                # Set DB role for current connection
                 with engine.connect() as conn:
                     conn.execute(text("SET ROLE admin"))
                 return redirect(url_for('admin_dashboard'))
@@ -90,13 +89,13 @@ def login():
         elif role == 'student':
             query = "SELECT * FROM Students WHERE studentName = :username"
             result = db.execute_dql_commands(query, {'username': username})
-            row = result.fetchone()
+            row = result.fetchone() if result else None
             if row:
                 session['role'] = 'student'
                 session['username'] = username
                 with engine.connect() as conn:
                     conn.execute(text("SET ROLE student"))
-                return redirect(url_for('student'))
+                return redirect(url_for('student_dashboard'))
             else:
                 flash('Invalid student credentials')
                 return redirect(url_for('login'))
@@ -104,7 +103,7 @@ def login():
         elif role == 'professor':
             query = "SELECT * FROM Professors WHERE professorName = :username"
             result = db.execute_dql_commands(query, {'username': username})
-            row = result.fetchone()
+            row = result.fetchone() if result else None
             if row:
                 session['role'] = 'professor'
                 session['username'] = username
@@ -114,9 +113,11 @@ def login():
             else:
                 flash('Invalid professor credentials')
                 return redirect(url_for('login'))
+
         else:
             flash('Please select a valid role')
             return redirect(url_for('login'))
+
     return render_template('login.html')
 
 @app.route('/admin_dashboard')
@@ -125,11 +126,11 @@ def admin_dashboard():
         return redirect(url_for('login'))
     return render_template('admin.html', username=session.get('username'))
 
-@app.route('/student')
-def student():
+@app.route('/student_dashboard')
+def student_dashboard():
     if session.get('role') != 'student':
         return redirect(url_for('login'))
-    return render_template('/student/student.html', username=session.get('username'))
+    return render_template('student/student.html', username=session.get('username'))
 
 @app.route('/professor_dashboard')
 def professor_dashboard():
@@ -146,25 +147,37 @@ def logout():
 def view_grades():
     if session.get('role') != 'student':
         return redirect(url_for("login"))
-    return render_template("./student/grades.html", username=session.get("username"))
+    return render_template("student/grades.html", username=session.get("username"))
 
-@app.route('/student/course_registation')
+@app.route('/student/course_registration')
 def course_registration():
     if session.get('role') != 'student':
         return redirect(url_for("login"))
-    return render_template("./student/course_registartion.html", username=session.get("username"))
+    return render_template("student/course_registration.html", username=session.get("username"))
 
 @app.route('/student/courses')
 def view_courses():
     if session.get('role') != 'student':
         return redirect(url_for("login"))
-    return render_template("./student/courses.html", username=session.get("username"))
+    return render_template("student/courses.html", username=session.get("username"))
 
 @app.route("/student/profile")
 def view_profile():
     if session.get('role') != 'student':
         return redirect(url_for('login'))
-    return render_template('./student/profile.html', username=session.get('username'))
+    return render_template('student/profile.html', username=session.get('username'))
+
+@app.route('/student/course_registration/add_courses')
+def add_courses():
+    if session.get('role') != 'student':
+        return redirect(url_for('login'))
+    return render_template('student/add_courses.html', username=session.get('username'))
+
+@app.route('/student/course_registration/drop_courses')
+def drop_courses():
+    if session.get('role') != 'student':
+        return redirect(url_for('login'))
+    return render_template('student/drop_courses.html', username=session.get('username'))
 
 if __name__ == '__main__':
     app.run(debug=True)
