@@ -3,16 +3,68 @@
 <head>
   <meta charset="UTF-8">
   <title>Professor Dashboard</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../static/css/professor/style.css">
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
-  <h1>Welcome Professor: {{ username }}</h1>
-  <nav>
-    <ul>
-      <li><a href="/professor/courses">My Courses</a></li>
-      <li><a href="/professor/grade_submission">Submit Grades</a></li>
-      <li><a href="{{ url_for('logout') }}">Logout</a></li>
-    </ul>
-  </nav>
+  <header>
+    <h1>Professor Dashboard</h1>
+    <div class="profile-menu">
+      <i class="fas fa-user-circle profile-icon" onclick="toggleDropdown()"></i>
+      <div class="dropdown" id="dropdownMenu">
+        <a href="/professor/profile">View Profile</a>
+        <a href="/professor/settings">Settings</a>
+        <a href="{{ url_for('logout') }}">Logout</a>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="welcome-message">
+      Welcome, Professor <span class="professor-name">{{ username }}</span>!
+    </div>
+
+    <div class="dashboard">
+      <div class="dashboard-item">
+        <a href="/professor/courses">
+          <i class="fas fa-book icon"></i>
+          <div class="title">My Courses</div>
+        </a>
+      </div>
+
+      <div class="dashboard-item">
+        <a href="/professor/grade_submission">
+          <i class="fas fa-clipboard-check icon"></i>
+          <div class="title">Submit Grades</div>
+        </a>
+      </div>
+
+      <div class="dashboard-item">
+        <a href="/professor/student_registration">
+          <i class="fas fa-user-check icon"></i>
+          <div class="title">Students Registration</div>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function toggleDropdown() {
+      document.getElementById('dropdownMenu').classList.toggle('show');
+    }
+
+    window.onclick = function(event) {
+      if (!event.target.matches('.profile-icon')) {
+        const dropdowns = document.getElementsByClassName("dropdown");
+        for (let i = 0; i < dropdowns.length; i++) {
+          const openDropdown = dropdowns[i];
+          if (openDropdown.classList.contains('show')) {
+            openDropdown.classList.remove('show');
+          }
+        }
+      }
+    }
+  </script>
 </body>
 </html>
