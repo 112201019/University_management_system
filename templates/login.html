@@ -1,74 +1,56 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <title>University Management System - Login</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f7f7f7;
-          }
-          
-          h1 {
-            color: #333;
-          }
-          
-          nav ul {
-            list-style: none;
-            padding: 0;
-          }
-          
-          nav ul li {
-            display: inline;
-            margin-right: 20px;
-          }
-          
-          a {
-            text-decoration: none;
-            color: #007bff;
-          }
-          
-          a:hover {
-            color: #0056b3;
-          }
-          
-          .flash-messages {
-            color: red;
-          }
-          
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>University Management System - Login</title>
+  <link rel="stylesheet" href="../static/css/login/style.css">
 </head>
+
 <body>
-    <h1>Login</h1>
-    {% with messages = get_flashed_messages() %}
-        {% if messages %}
-            <ul class="flash-messages">
-            {% for message in messages %}
-                <li>{{ message }}</li>
-            {% endfor %}
-            </ul>
-        {% endif %}
-    {% endwith %}
-    <form action="{{ url_for('login') }}" method="POST">
-        <label for="role">Role:</label>
-        <select name="role" id="role">
+  <div class="login-container">
+    <div class="header">
+      University Management System
+    </div>
+
+    <div class="form-container">
+      <div class="university-logo">U</div>
+
+      {% with messages = get_flashed_messages() %}
+      {% if messages %}
+      <ul class="flash-messages">
+        {% for message in messages %}
+        <li>{{ message }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      {% endwith %}
+
+      <form action="{{ url_for('login') }}" method="POST">
+        <div class="form-group">
+          <label for="role">Role:</label>
+          <select name="role" id="role">
             <option value="admin">Admin</option>
             <option value="student">Student</option>
             <option value="professor">Professor</option>
-        </select>
-        <br><br>
-        
-        <label for="username">Username:</label>
-        <input type="text" name="username" id="username" required />
-        <br><br>
-        
-        <label for="password">Password:</label>
-        <input type="password" name="password" id="password" required />
-        <br><br>
-        
-        <input type="submit" value="Login" />
-    </form>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="username">Username:</label>
+          <input type="text" name="username" id="username" required />
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password:</label>
+          <input type="password" name="password" id="password" required />
+        </div>
+
+        <button type="submit" class="submit-btn">Login</button>
+      </form>
+    </div>
+  </div>
 </body>
+
 </html>

@@ -96,7 +96,7 @@ def login():
                 session['username'] = username
                 with engine.connect() as conn:
                     conn.execute(text("SET ROLE student"))
-                return redirect(url_for('student_dashboard'))
+                return redirect(url_for('student'))
             else:
                 flash('Invalid student credentials')
                 return redirect(url_for('login'))
@@ -125,11 +125,11 @@ def admin_dashboard():
         return redirect(url_for('login'))
     return render_template('admin.html', username=session.get('username'))
 
-@app.route('/student_dashboard')
-def student_dashboard():
+@app.route('/student')
+def student():
     if session.get('role') != 'student':
         return redirect(url_for('login'))
-    return render_template('student.html', username=session.get('username'))
+    return render_template('/student/student.html', username=session.get('username'))
 
 @app.route('/professor_dashboard')
 def professor_dashboard():
