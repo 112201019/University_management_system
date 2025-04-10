@@ -142,5 +142,35 @@ def logout():
     session.clear()
     return redirect(url_for('home'))
 
+@app.route('/student/grades')
+def view_grades():
+    if session.get('role') != 'student':
+        return redirect(url_for("login"))
+    return render_template("./student/grades.html", username=session.get("username"))
+
+@app.route('/student/course_registation')
+def course_registration():
+    if session.get('role') != 'student':
+        return redirect(url_for("login"))
+    return render_template("./student/course_registartion.html", username=session.get("username"))
+
+@app.route('/student/courses')
+def view_courses():
+    if session.get('role') != 'student':
+        return redirect(url_for("login"))
+    return render_template("./student/courses.html", username=session.get("username"))
+
+@app.route("/student/profile")
+def view_profile():
+    if session.get('role') != 'student':
+        return redirect(url_for('login'))
+    return render_template('./student/profile.html', username=session.get('username'))
+
+@app.route("/student/settings")
+def student_settings():
+    if session.get('role') != 'student':
+        return redirect(url_for('login'))
+    return render_template('./student/settings.html', username=session.get('username'))
+
 if __name__ == '__main__':
     app.run(debug=True)

@@ -10,7 +10,28 @@
 
 <body>
     <header>
-        <h1>Welcome Back, <span class="student-name">{{ student_name }}</span>!</h1>
+        <h1>Welcome Back, <span class="student-name">{{ username }}</span>!</h1>
+        <div class="user-dropdown">
+            <button class="dropdown-btn">
+                <div class="profile-avatar">👤</div>
+                <span class="dropdown-arrow">▼</span>
+            </button>
+            <div class="dropdown-content">
+                <a href="student/profile">
+                    <div class="icon">👤</div>
+                    <span>Profile</span>
+                </a>
+                <a href="student/settings">
+                    <div class="icon">⚙️</div>
+                    <span>Settings</span>
+                </a>
+                <div class="dropdown-divider"></div>
+                <a href="{{ url_for('logout') }}" class="logout-option">
+                    <div class="icon">🚪</div>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </div>
     </header>
 
     <div class="container">
@@ -21,41 +42,46 @@
 
         <div class="dashboard">
             <div class="dashboard-item">
-                <a href="{{ url_for('grades') }}">
-                    <div class="icon">📊</div>
-                    <div class="title">Grades</div>
+                <a href="student/courses">
+                    <div class="icon">📚</div>
+                    <div class="title">My Courses</div>
                 </a>
             </div>
 
             <div class="dashboard-item">
-                <a href="{{ url_for('course_registration') }}">
+                <a href="student/course_registration">
                     <div class="icon">📝</div>
                     <div class="title">Course Registration</div>
                 </a>
             </div>
 
             <div class="dashboard-item">
-                <a href="{{ url_for('drop_courses') }}">
-                    <div class="icon">❌</div>
-                    <div class="title">Drop Courses</div>
-                </a>
-            </div>
-
-            <div class="dashboard-item">
-                <a href="{{ url_for('profile') }}">
-                    <div class="icon">👤</div>
-                    <div class="title">Profile</div>
-                </a>
-            </div>
-
-            <div class="dashboard-item logout">
-                <a href="{{ url_for('logout') }}">
-                    <div class="icon">🚪</div>
-                    <div class="title">Logout</div>
+                <a href="student/view_grades">
+                    <div class="icon">📊</div>
+                    <div class="title">View Grades</div>
                 </a>
             </div>
         </div>
     </div>
+
+    <script>
+        // Toggle dropdown menu
+        document.querySelector('.dropdown-btn').addEventListener('click', function () {
+            document.querySelector('.dropdown-content').classList.toggle('show');
+        });
+
+        // Close the dropdown if clicked outside
+        window.addEventListener('click', function (event) {
+            if (!event.target.matches('.dropdown-btn') &&
+                !event.target.matches('.dropdown-arrow') &&
+                !event.target.matches('.profile-avatar')) {
+                const dropdown = document.querySelector('.dropdown-content');
+                if (dropdown.classList.contains('show')) {
+                    dropdown.classList.remove('show');
+                }
+            }
+        });
+    </script>
 </body>
 
 </html>
