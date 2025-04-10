@@ -166,11 +166,5 @@ def view_profile():
         return redirect(url_for('login'))
     return render_template('./student/profile.html', username=session.get('username'))
 
-@app.route("/student/settings")
-def student_settings():
-    if session.get('role') != 'student':
-        return redirect(url_for('login'))
-    return render_template('./student/settings.html', username=session.get('username'))
-
 if __name__ == '__main__':
     app.run(debug=True)
