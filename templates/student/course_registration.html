@@ -5,25 +5,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Course Registration</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/student/course_registration.css') }}">
 </head>
 
 <body>
     <header>
         <h1>Hello, <span class="student-name">{{ username }}</span> 👋</h1>
-        <div class="user-dropdown">
-            <button class="dropdown-btn">
-                <div class="profile-avatar">👤</div>
-                <span class="dropdown-arrow">▼</span>
-            </button>
-            <div class="dropdown-content">
+        <div class="profile-menu">
+            <div class="profile-icon-wrapper" onclick="toggleDropdown()">
+                <i class="fas fa-user-circle profile-icon"></i>
+            </div>
+            <div class="dropdown" id="dropdownMenu">
                 <a href="{{ url_for('view_profile') }}">
-                    <div class="icon">👤</div>
+                    <i class="fas fa-user"></i>
                     <span>View Profile</span>
                 </a>
                 <div class="dropdown-divider"></div>
                 <a href="{{ url_for('logout') }}" class="logout-option">
-                    <div class="icon">🚪</div>
+                    <i class="fas fa-sign-out-alt"></i>
                     <span>Log Out</span>
                 </a>
             </div>
@@ -39,14 +39,18 @@
         <div class="dashboard">
             <div class="dashboard-item">
                 <a href="{{ url_for('add_courses') }}">
-                    <div class="icon">➕</div>
+                    <div class="icon">
+                        <i class="fas fa-plus-circle"></i>
+                    </div>
                     <div class="title">Enroll in Courses</div>
                 </a>
             </div>
 
             <div class="dashboard-item">
                 <a href="{{ url_for('drop_courses') }}">
-                    <div class="icon">❌</div>
+                    <div class="icon">
+                        <i class="fas fa-minus-circle"></i>
+                    </div>
                     <div class="title">Drop Enrolled Courses</div>
                 </a>
             </div>
@@ -54,17 +58,16 @@
     </div>
 
     <script>
-        // Toggle dropdown menu
-        document.querySelector('.dropdown-btn').addEventListener('click', function () {
-            document.querySelector('.dropdown-content').classList.toggle('show');
-        });
+        // Toggle dropdown function
+        function toggleDropdown() {
+            document.getElementById('dropdownMenu').classList.toggle('show');
+        }
 
         // Close the dropdown if clicked outside
         window.addEventListener('click', function (event) {
-            if (!event.target.matches('.dropdown-btn') &&
-                !event.target.matches('.dropdown-arrow') &&
-                !event.target.matches('.profile-avatar')) {
-                const dropdown = document.querySelector('.dropdown-content');
+            if (!event.target.matches('.profile-icon') &&
+                !event.target.matches('.profile-icon-wrapper')) {
+                const dropdown = document.getElementById('dropdownMenu');
                 if (dropdown.classList.contains('show')) {
                     dropdown.classList.remove('show');
                 }

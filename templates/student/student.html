@@ -5,25 +5,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Dashboard</title>
-    <link rel="stylesheet" href="../../static/css/student/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/student/style.css') }}">
 </head>
 
 <body>
     <header>
         <h1>Welcome Back, <span class="student-name">{{ username }}</span>!</h1>
-        <div class="user-dropdown">
-            <button class="dropdown-btn">
-                <div class="profile-avatar">👤</div>
-                <span class="dropdown-arrow">▼</span>
-            </button>
-            <div class="dropdown-content">
+        <div class="profile-menu">
+            <div class="profile-icon-wrapper" onclick="toggleDropdown()">
+                <i class="fas fa-user-circle profile-icon"></i>
+            </div>
+            <div class="dropdown" id="dropdownMenu">
                 <a href="{{ url_for('view_profile') }}">
-                    <div class="icon">👤</div>
+                    <i class="fas fa-user"></i>
                     <span>Profile</span>
                 </a>
                 <div class="dropdown-divider"></div>
                 <a href="{{ url_for('logout') }}" class="logout-option">
-                    <div class="icon">🚪</div>
+                    <i class="fas fa-sign-out-alt"></i>
                     <span>Logout</span>
                 </a>
             </div>
@@ -39,21 +39,27 @@
         <div class="dashboard">
             <div class="dashboard-item">
                 <a href="{{ url_for('view_courses') }}">
-                    <div class="icon">📚</div>
+                    <div class="icon">
+                        <i class="fas fa-book"></i>
+                    </div>
                     <div class="title">My Courses</div>
                 </a>
             </div>
 
             <div class="dashboard-item">
                 <a href="{{ url_for('course_registration') }}">
-                    <div class="icon">📝</div>
+                    <div class="icon">
+                        <i class="fas fa-edit"></i>
+                    </div>
                     <div class="title">Course Registration</div>
                 </a>
             </div>
 
             <div class="dashboard-item">
                 <a href="{{ url_for('view_grades') }}">
-                    <div class="icon">📊</div>
+                    <div class="icon">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
                     <div class="title">View Grades</div>
                 </a>
             </div>
@@ -61,17 +67,16 @@
     </div>
 
     <script>
-        // Toggle dropdown menu
-        document.querySelector('.dropdown-btn').addEventListener('click', function () {
-            document.querySelector('.dropdown-content').classList.toggle('show');
-        });
+        // Toggle dropdown function
+        function toggleDropdown() {
+            document.getElementById('dropdownMenu').classList.toggle('show');
+        }
 
         // Close the dropdown if clicked outside
         window.addEventListener('click', function (event) {
-            if (!event.target.matches('.dropdown-btn') &&
-                !event.target.matches('.dropdown-arrow') &&
-                !event.target.matches('.profile-avatar')) {
-                const dropdown = document.querySelector('.dropdown-content');
+            if (!event.target.matches('.profile-icon') &&
+                !event.target.matches('.profile-icon-wrapper')) {
+                const dropdown = document.getElementById('dropdownMenu');
                 if (dropdown.classList.contains('show')) {
                     dropdown.classList.remove('show');
                 }

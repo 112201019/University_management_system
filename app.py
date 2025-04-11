@@ -101,15 +101,15 @@ def login():
             elif role == 'student':
                 query=f"""
                     SELECT studentName FROM Students WHERE studentId= {user_id};
-                    """
+                """
                 session['username'] =  db.execute_dql_commands(query).fetchone()[0]
                 # print(type(db.execute_dql_commands(query).fetchone()))
-                return redirect(url_for('student'))
+                return redirect(url_for('student_dashboard'))
             
             elif role == 'professor':
                 query=f"""
                     SELECT professorName FROM Professors WHERE professorId= {user_id};
-                    """
+                """
                 session['username'] =  db.execute_dql_commands(query).fetchone()[0]
                 return redirect(url_for('professor_dashboard'))
         else:
@@ -123,8 +123,8 @@ def admin_dashboard():
         return redirect(url_for('login'))
     return render_template('admin.html', username=session.get('username'))
 
-@app.route('/student')
-def student():
+@app.route('/student_dashboard')
+def student_dashboard():
     if session.get('role') != 'student':
         return redirect(url_for('login'))
     return render_template('/student/student.html', username=session.get('username'))
@@ -150,7 +150,7 @@ def view_grades():
 def course_registration():
     if session.get('role') != 'student':
         return redirect(url_for("login"))
-    return render_template("./student/course_registartion.html", username=session.get("username"))
+    return render_template("./student/course_registration.html", username=session.get("username"))
 
 @app.route('/student/courses')
 def view_courses():
@@ -163,6 +163,18 @@ def view_profile():
     if session.get('role') != 'student':
         return redirect(url_for('login'))
     return render_template('./student/profile.html', username=session.get('username'))
+
+@app.route('/student/course_registation/add_courses')
+def add_courses():
+    if session.get('role') != 'student':
+        return redirect(url_for("login"))
+    return render_template("./student/drop_courses.html", username=session.get("username"))
+
+@app.route('/student/course_registation/drop_courses')
+def drop_courses():
+    if session.get('role') != 'student':
+        return redirect(url_for("login"))
+    return render_template("./student/add_courses.html", username=session.get("username"))
 
 if __name__ == '__main__':
     app.run(debug=True)

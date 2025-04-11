@@ -1,8 +1,8 @@
 -- 1. Define tables with corrected data types, checks, and constraints
 CREATE TABLE UserLogin (
-  role VARCHAR(20) NOT NULL CHECK (role IN ('student', 'professor', 'admin'))
+  role VARCHAR(20) NOT NULL CHECK (role IN ('student', 'professor', 'admin')),
   userId INT PRIMARY KEY,
-  password VARCHAR(255) NOT NULL,
+  password VARCHAR(255) NOT NULL
 );
 
 CREATE TABLE Degree (
