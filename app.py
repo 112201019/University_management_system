@@ -99,12 +99,10 @@ def login():
                 session['username'] = 'admin'
                 return redirect(url_for('admin_dashboard'))
             elif role == 'student':
-                query=f"""
-                    SELECT studentName FROM Students WHERE studentId= {user_id};
-                """
-                session['username'] =  db.execute_dql_commands(query).fetchone()[0]
-                # print(type(db.execute_dql_commands(query).fetchone()))
-                return redirect(url_for('student_dashboard'))
+                query = "SELECT studentName FROM Students WHERE studentId = :user_id"
+                session['username'] = db.execute_dql_commands(query, {'user_id': user_id}).fetchone()[0]
+                session['user_id'] = user_id
+                return redirect(url_for('student_dashboard', username=session.get('username')))
             
             elif role == 'professor':
                 query=f"""
@@ -162,7 +160,58 @@ def view_courses():
 def view_profile():
     if session.get('role') != 'student':
         return redirect(url_for('login'))
-    return render_template('./student/profile.html', username=session.get('username'))
+    
+    user_id = session.get('user_id')
+    if not user_id:
+        flash('Session expired. Please login again.')
+        return redirect(url_for('login'))
+    
+    student_query = """
+        SELECT 
+            studentId AS "studentId",
+            studentName AS "studentName",
+            degreeId AS "degreeId",
+            departmentId AS "departmentId",
+            dateOfJoining AS "dateOfJoining",
+            gender,
+            dob,
+            graduated
+        FROM Students
+        WHERE studentId = :student_id
+    """
+    
+    student_result = db.execute_dql_commands(student_query, {'student_id': user_id})
+    student = student_result.mappings().first()
+    
+    if not student:
+        flash('Student information not found')
+        return redirect(url_for('student_dashboard'))
+    
+    dept_query = """
+        SELECT deptName AS "deptName"
+        FROM Department
+        WHERE departmentId = :dept_id
+    """
+    dept_result = db.execute_dql_commands(dept_query, {'dept_id': student['departmentId']})
+    dept_row = dept_result.mappings().first()
+    department_name = dept_row['deptName'] if dept_row else "Not assigned"
+    
+    degree_query = """
+        SELECT degreeName AS "degreeName"
+        FROM Degree
+        WHERE degreeId = :degree_id
+    """
+    degree_result = db.execute_dql_commands(degree_query, {'degree_id': student['degreeId']})
+    degree_row = degree_result.mappings().first()
+    degree_name = degree_row['degreeName'] if degree_row else "Not assigned"
+    
+    return render_template(
+        './student/profile.html', 
+        username=session.get('username'),
+        student=student,
+        department_name=department_name,
+        degree_name=degree_name
+    )
 
 @app.route('/student/course_registation/add_courses')
 def add_courses():
