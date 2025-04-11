@@ -1,4 +1,10 @@
 -- 1. Define tables with corrected data types, checks, and constraints
+CREATE TABLE UserLogin (
+  role VARCHAR(20) NOT NULL CHECK (role IN ('student', 'professor', 'admin'))
+  userId INT PRIMARY KEY,
+  password VARCHAR(255) NOT NULL,
+);
+
 CREATE TABLE Degree (
   degreeId int PRIMARY KEY,
   degreeName varchar(100) NOT NULL,
@@ -29,9 +35,10 @@ CREATE TABLE Students (
   studentName varchar(100) NOT NULL,
   degreeId int NOT NULL,
   departmentId int NOT NULL, -- Renamed from deptId
-  yearOfJoining int NOT NULL CHECK (yearOfJoining > 1900),
+  dateOfJoining  date NOT NULL,
   gender varchar(10) CHECK (gender IN ('Male', 'Female', 'Other')),
-  dob date NOT NULL
+  dob date NOT NULL,
+  graduated int NOT NULL CHECK (graduated IN (1,0))
 );
 
 CREATE TABLE Courses (
@@ -41,7 +48,7 @@ CREATE TABLE Courses (
   typeOfCourse varchar(2) NOT NULL CHECK (typeOfCourse IN ('UG', 'PG')),
   professorId int NOT NULL,
   courseType varchar(20) CHECK (courseType IN ('Theory', 'Lab')), -- Renamed from 'type'
-  credits int NOT NULL CHECK (credits > 0)
+  credits int NOT NULL CHECK (credits > 0 AND credits <= 5)
 );
 
 CREATE TABLE AcademicTerm (
@@ -89,100 +96,139 @@ ALTER TABLE Enrollment ADD FOREIGN KEY (studentId) REFERENCES Students(studentId
 ALTER TABLE Enrollment ADD FOREIGN KEY (offeringId) REFERENCES CourseOffering(offeringId);
 ALTER TABLE StudentGrades ADD FOREIGN KEY (enrollmentId) REFERENCES Enrollment(enrollmentId);
 
-INSERT INTO Degree (degreeId, degreeName, ugPgType, maxYears, totalCreditsRequired, coreCreditsRequired) VALUES
-(1, 'B.Tech Computer Science', 'UG', 4, 180, 120),
-(2, 'M.Tech Data Science', 'PG', 2, 90, 60),
-(3, 'B.Sc Mathematics', 'UG', 3, 150, 100),
-(4, 'MBA Finance', 'PG', 2, 120, 80),
-(5, 'B.A English', 'UG', 3, 135, 90),
-(6, 'Ph.D Physics', 'PG', 5, 200, 140),
-(7, 'B.Com Accounting', 'UG', 3, 150, 100),
-(8, 'M.Sc Chemistry', 'PG', 2, 90, 60);
 
-INSERT INTO Department (departmentId, deptName, headOfDeptId) VALUES
-(101, 'Computer Science', NULL),
-(102, 'Mathematics', NULL),
-(103, 'Physics', NULL),
-(104, 'Chemistry', NULL),
-(105, 'English', NULL),
-(106, 'Finance', NULL),
-(107, 'Data Science', NULL),
-(108, 'Accounting', NULL);
+INSERT INTO Degree (degreeId, degreeName, ugPgType, maxYears, totalCreditsRequired, coreCreditsRequired)
+VALUES 
+  (1, 'B.Tech', 'UG', 4, 160, 100),
+  (2, 'M.Tech', 'PG', 2, 60, 40);
 
-INSERT INTO Professors (professorId, departmentId, professorName, dob, gender) VALUES
-(201, 101, 'Dr. Alice Brown', '1975-03-15', 'Female'),
-(202, 102, 'Dr. Bob Smith', '1980-07-22', 'Male'),
-(203, 103, 'Dr. Carol White', '1978-11-30', 'Other'),
-(204, 104, 'Dr. David Lee', '1985-02-14', 'Male'),
-(205, 105, 'Dr. Emily Clark', '1990-09-10', 'Female'),
-(206, 106, 'Dr. Frank Miller', '1972-12-05', 'Male'),
-(207, 107, 'Dr. Grace Hall', '1983-04-18', 'Female'),
-(208, 108, 'Dr. Henry Wilson', '1976-06-25', 'Male');
+-- 2. Insert Departments (Branches)
+-- headOfDeptId is temporarily set to NULL; we update after inserting professors.
+INSERT INTO Department (departmentId, deptName, headOfDeptId)
+VALUES 
+  (1, 'Computer Science Engineering', NULL),
+  (2, 'Data Science Engineering', NULL),
+  (3, 'Electrical Engineering', NULL);
 
-UPDATE Department SET headOfDeptId = 201 WHERE departmentId = 101;
-UPDATE Department SET headOfDeptId = 202 WHERE departmentId = 102;
-UPDATE Department SET headOfDeptId = 203 WHERE departmentId = 103;
-UPDATE Department SET headOfDeptId = 204 WHERE departmentId = 104;
-UPDATE Department SET headOfDeptId = 205 WHERE departmentId = 105;
-UPDATE Department SET headOfDeptId = 206 WHERE departmentId = 106;
-UPDATE Department SET headOfDeptId = 207 WHERE departmentId = 107;
-UPDATE Department SET headOfDeptId = 208 WHERE departmentId = 108;
+-- 3. Insert Professors (one per department)
+INSERT INTO Professors (professorId, departmentId, professorName, dob, gender)
+VALUES 
+  (10001, 1, 'Dr. Alice', '1975-06-15', 'Female'),
+  (10002, 2, 'Dr. Bob', '1980-09-20', 'Male'),
+  (10003, 3, 'Dr. Carol', '1978-04-10', 'Female');
 
-INSERT INTO Students (studentId, studentName, degreeId, departmentId, yearOfJoining, gender, dob) VALUES
-(301, 'John Doe', 1, 101, 2020, 'Male', '2002-05-10'),
-(302, 'Jane Smith', 2, 107, 2021, 'Female', '1999-08-12'),
-(303, 'Ravi Kumar', 3, 102, 2022, 'Male', '2003-01-25'),
-(304, 'Priya Patel', 4, 106, 2020, 'Female', '1998-11-30'),
-(305, 'Alex Green', 5, 105, 2023, 'Other', '2004-03-15'),
-(306, 'Sara Khan', 6, 103, 2019, 'Female', '1997-07-20'),
-(307, 'Mike Johnson', 7, 108, 2021, 'Male', '2001-09-05'),
-(308, 'Lily Chen', 8, 104, 2022, 'Female', '2000-04-18');
+-- 4. Update Departments to assign headOfDeptId from the corresponding professor
+UPDATE Department SET headOfDeptId = 10001 WHERE departmentId = 1;
+UPDATE Department SET headOfDeptId = 10002 WHERE departmentId = 2;
+UPDATE Department SET headOfDeptId = 10003 WHERE departmentId = 3;
 
-INSERT INTO Courses (courseId, courseName, departmentId, typeOfCourse, professorId, courseType, credits) VALUES
-(401, 'Database Systems', 101, 'UG', 201, 'Theory', 4),
-(402, 'Linear Algebra', 102, 'UG', 202, 'Theory', 3),
-(403, 'Quantum Mechanics', 103, 'PG', 203, 'Theory', 5),
-(404, 'Organic Chemistry', 104, 'PG', 204, 'Theory', 4),
-(405, 'Shakespeare Studies', 105, 'UG', 205, 'Theory', 3),
-(406, 'Financial Management', 106, 'PG', 206, 'Theory', 4),
-(407, 'Machine Learning', 107, 'PG', 207, 'Theory', 5),
-(408, 'Tax Accounting', 108, 'UG', 208, 'Lab', 4);
+-- 5. Insert Students
+INSERT INTO Students (studentId, studentName, degreeId, departmentId, dateOfJoining, gender, dob, graduated)
+VALUES 
+  -- Department 1: Computer Science Engineering (all B.Tech)
+  (2000001, 'John Doe', 1, 1, '2023-08-15', 'Male', '2005-05-12', 0),
+  (2000002, 'Jane Smith', 1, 1, '2023-08-15', 'Female', '2005-11-30', 0),
 
-INSERT INTO AcademicTerm (termId, termName, startDate, endDate) VALUES
-(501, 'Fall 2023', '2023-08-01', '2023-12-15'),
-(502, 'Spring 2024', '2024-01-10', '2024-05-20'),
-(503, 'Summer 2024', '2024-06-01', '2024-07-31'),
-(504, 'Fall 2024', '2024-08-01', '2024-12-15'),
-(505, 'Spring 2025', '2025-01-10', '2025-05-20'),
-(506, 'Summer 2025', '2025-06-01', '2025-07-31'),
-(507, 'Fall 2025', '2025-08-01', '2025-12-15'),
-(508, 'Spring 2026', '2026-01-10', '2026-05-20');
+  -- Department 2: Data Science Engineering (mix of B.Tech and M.Tech)
+  (2000003, 'Mike Brown', 1, 2, '2023-08-15', 'Male', '2005-03-22', 0),
+  (2000004, 'Emily White', 2, 2, '2024-01-10', 'Female', '2002-12-05', 0),
 
-INSERT INTO CourseOffering (offeringId, courseId, termId, professorId, maxCapacity) VALUES
-(601, 401, 501, 201, 30),
-(602, 402, 501, 202, 25),
-(603, 403, 502, 203, 20),
-(604, 404, 502, 204, 25),
-(605, 405, 503, 205, 30),
-(606, 406, 503, 206, 20),
-(607, 407, 504, 207, 25),
-(608, 408, 504, 208, 30);
+  -- Department 3: Electrical Engineering (all B.Tech)
+  (2000005, 'Robert Green', 1, 3, '2023-08-15', 'Male', '2005-07-07', 0),
+  (2000006, 'Linda Blue', 1, 3, '2023-08-15', 'Female', '2005-09-15', 0);
 
-INSERT INTO Enrollment (enrollmentId, studentId, offeringId, enrollmentDate, status) VALUES
-(701, 301, 601, '2023-08-05', 'Approved'),
-(702, 302, 607, '2024-01-12', 'Approved'),
-(703, 303, 602, '2023-08-10', 'Approved'),
-(704, 304, 606, '2024-06-05', 'Rejected'),
-(705, 305, 605, '2024-06-02', 'Approved'),
-(706, 306, 603, '2024-01-15', 'Approved'),
-(707, 307, 608, '2024-08-10', 'Approved'),
-(708, 308, 604, '2024-01-20', 'Approved');
+-- 6. Insert Courses
+-- Department 1 Courses
+INSERT INTO Courses (courseId, courseName, departmentId, typeOfCourse, professorId, courseType, credits)
+VALUES
+  (3000001, 'Introduction to Programming', 1, 'UG', 10001, 'Theory', 4),
+  (3000002, 'Data Structures', 1, 'UG', 10001, 'Theory', 4),
+  (3000003, 'Programming Lab', 1, 'UG', 10001, 'Lab', 2);
 
-INSERT INTO StudentGrades (enrollmentId, grade, remarks) VALUES
-(701, 85.5, 'Good performance'),
-(702, 92.0, 'Excellent work'),
-(703, 78.5, 'Needs improvement'),
-(705, 88.5, 'Consistent effort'),
-(706, 95.0, 'Top of the class'),
-(707, 72.5, 'Average'),
-(708, 81.0, 'Good participation');
+-- Department 2 Courses
+INSERT INTO Courses (courseId, courseName, departmentId, typeOfCourse, professorId, courseType, credits)
+VALUES
+  (3000004, 'Statistics for Data Science', 2, 'UG', 10002, 'Theory', 3),
+  (3000005, 'Machine Learning Basics', 2, 'UG', 10002, 'Theory', 4),
+  (3000006, 'Data Science Lab', 2, 'UG', 10002, 'Lab', 2);
+
+-- Department 3 Courses
+INSERT INTO Courses (courseId, courseName, departmentId, typeOfCourse, professorId, courseType, credits)
+VALUES
+  (3000007, 'Circuits and Electronics', 3, 'UG', 10003, 'Theory', 4),
+  (3000008, 'Electrical Machines', 3, 'UG', 10003, 'Theory', 4),
+  (3000009, 'Electronics Lab', 3, 'UG', 10003, 'Lab', 2);
+
+-- 7. Insert Academic Terms
+-- Ongoing term (Spring 2025: current date 2025-04-11 falls between start and end dates)
+INSERT INTO AcademicTerm (termId, termName, startDate, endDate)
+VALUES 
+  (1, 'Spring 2025', '2025-01-10', '2025-05-20');
+
+-- An additional past term to support a completed enrollment and grade (Fall 2024)
+INSERT INTO AcademicTerm (termId, termName, startDate, endDate)
+VALUES 
+  (2, 'Fall 2024', '2024-09-01', '2024-12-15');
+
+-- 8. Insert Course Offerings
+-- Ongoing semester offerings (termId = 1)
+INSERT INTO CourseOffering (offeringId, courseId, termId, professorId, maxCapacity)
+VALUES
+  -- For Department 1
+  (4000001, 3000001, 1, 10001, 30),
+  (4000002, 3000002, 1, 10001, 30),
+  -- For Department 2
+  (4000003, 3000004, 1, 10002, 25),
+  (4000004, 3000005, 1, 10002, 25),
+  -- For Department 3
+  (4000005, 3000007, 1, 10003, 20),
+  (4000006, 3000008, 1, 10003, 20);
+
+-- Past term offering (termId = 2) to demonstrate StudentGrades entry.
+INSERT INTO CourseOffering (offeringId, courseId, termId, professorId, maxCapacity)
+VALUES
+  (4000007, 3000003, 2, 10001, 30);
+
+-- 9. Insert Enrollments
+-- Enroll each student in at least one current course offering:
+INSERT INTO Enrollment (enrollmentId, studentId, offeringId, enrollmentDate, status)
+VALUES
+  -- Department 1 current enrollments
+  (5000001, 2000001, 4000001, '2025-04-10', 'Approved'),
+  (5000002, 2000002, 4000002, '2025-04-10', 'Approved'),
+  -- Department 2 current enrollments
+  (5000003, 2000003, 4000003, '2025-04-10', 'Approved'),
+  (5000004, 2000004, 4000004, '2025-04-10', 'Approved'),
+  -- Department 3 current enrollments
+  (5000005, 2000005, 4000005, '2025-04-10', 'Approved'),
+  (5000006, 2000006, 4000006, '2025-04-10', 'Approved');
+
+-- Additionally, enroll student 201 in the past term course offering (for a completed course)
+INSERT INTO Enrollment (enrollmentId, studentId, offeringId, enrollmentDate, status)
+VALUES
+  (5000007, 2000001, 4000007, '2024-09-05', 'Approved');
+
+-- 10. Insert Student Grades for the completed enrollment from the past term
+INSERT INTO StudentGrades (enrollmentId, grade, remarks)
+VALUES
+  (5000007, 85.50, 'Good performance');
+
+-- 11. Insert UserLogins
+INSERT INTO UserLogin (role, userId, password)
+VALUES
+  ('student', 2000001, '2000001'),
+  ('student', 2000002, '2000002'),
+  ('student', 2000003, '2000003'),
+  ('student', 2000004, '2000004'),
+  ('student', 2000005, '2000005'),
+  ('student', 2000006, '2000006'),
+  ('student', 2000007, '2000007'),
+  ('student', 2000008, '2000008'),
+  ('professor', 10001, '10001'),
+  ('professor', 10002, '10002'),
+  ('professor', 10003, '10003'),
+  ('admin', 9999999, '9999999');
+
+CREATE ROLE student;
+CREATE ROLE professor;
+CREATE ROLE admin;
