@@ -154,7 +154,52 @@ def course_registration():
 def view_courses():
     if session.get('role') != 'student':
         return redirect(url_for("login"))
-    return render_template("./student/courses.html", username=session.get("username"))
+
+    user_id = session.get('user_id')
+    if not user_id:
+        flash('Session expired. Please login again.')
+        return redirect(url_for('login'))
+
+    student_dept_query = """
+        SELECT departmentId
+        FROM Students
+        WHERE studentId = :student_id
+    """
+    student_dept_result = db.execute_dql_commands(student_dept_query, {'student_id': user_id})
+    student_dept_row = student_dept_result.fetchone()
+    student_dept = student_dept_row[0] if student_dept_row else None
+
+    if student_dept is None:
+        flash('Student department information not found.')
+        return redirect(url_for('student_dashboard'))
+
+    query = """
+        SELECT 
+            c.courseId AS "courseId", 
+            c.courseName AS "courseName", 
+            c.credits AS "credits", 
+            d.deptName AS "deptName", 
+            at.termName AS "termName", 
+            p.professorName AS "professorName",
+            CASE 
+                WHEN c.departmentId = :student_dept THEN 'Core Course' 
+                ELSE 'Elective Course' 
+            END AS "courseType"
+        FROM Enrollment e
+        JOIN CourseOffering co ON e.offeringId = co.offeringId
+        JOIN Courses c ON co.courseId = c.courseId
+        JOIN Department d ON c.departmentId = d.departmentId
+        JOIN AcademicTerm at ON co.termId = at.termId
+        JOIN Professors p ON co.professorId = p.professorId
+        WHERE e.studentId = :student_id AND e.status = 'Approved'
+    """
+    result = db.execute_dql_commands(query, {'student_id': user_id, 'student_dept': student_dept})
+    courses = result.mappings().all()
+    
+    return render_template("./student/courses.html",
+                           username=session.get('username'),
+                           courses=courses)
+
 
 @app.route("/student/profile")
 def view_profile():
