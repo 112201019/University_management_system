@@ -39,7 +39,7 @@ CREATE TABLE Students (
   gender varchar(10) CHECK (gender IN ('Male', 'Female', 'Other')),
   dob date NOT NULL,
   dateOfGraduation date CHECK (dateOfGraduation>dateOfJoining),
-  graduationStatus varchar(20) CHECK(graduationStatus in ('Graduated','In Progress','Discontinued', 'Max years exceeded'))
+  graduationStatus varchar(20) NOT NULL CHECK(graduationStatus in ('Graduated','In Progress','Discontinued', 'Max years exceeded'))
 );
 
 CREATE TABLE Courses (
@@ -124,19 +124,19 @@ UPDATE Department SET headOfDeptId = 10002 WHERE departmentId = 2;
 UPDATE Department SET headOfDeptId = 10003 WHERE departmentId = 3;
 
 -- 5. Insert Students
-INSERT INTO Students (studentId, studentName, degreeId, departmentId, dateOfJoining, gender, dob, graduated)
+INSERT INTO Students (studentId, studentName, degreeId, departmentId, dateOfJoining, gender, dob, dateOfGraduation, graduationStatus)
 VALUES 
   -- Department 1: Computer Science Engineering (all B.Tech)
-  (2000001, 'John Doe', 1, 1, '2023-08-15', 'Male', '2005-05-12', 0),
-  (2000002, 'Jane Smith', 1, 1, '2023-08-15', 'Female', '2005-11-30', 0),
+  (2000001, 'John Doe', 1, 1, '2023-08-15', 'Male', '2005-05-12', NULL, 'In Progress'),
+  (2000002, 'Jane Smith', 1, 1, '2023-08-15', 'Female', '2005-11-30', NULL, 'In Progress'),
 
   -- Department 2: Data Science Engineering (mix of B.Tech and M.Tech)
-  (2000003, 'Mike Brown', 1, 2, '2023-08-15', 'Male', '2005-03-22', 0),
-  (2000004, 'Emily White', 2, 2, '2024-01-10', 'Female', '2002-12-05', 0),
+  (2000003, 'Mike Brown', 1, 2, '2023-08-15', 'Male', '2005-03-22', NULL, 'In Progress'),
+  (2000004, 'Emily White', 2, 2, '2024-01-10', 'Female', '2002-12-05', NULL, 'In Progress'),
 
   -- Department 3: Electrical Engineering (all B.Tech)
-  (2000005, 'Robert Green', 1, 3, '2023-08-15', 'Male', '2005-07-07', 0),
-  (2000006, 'Linda Blue', 1, 3, '2023-08-15', 'Female', '2005-09-15', 0);
+  (2000005, 'Robert Green', 1, 3, '2023-08-15', 'Male', '2005-07-07', NULL, 'In Progress'),
+  (2000006, 'Linda Blue', 1, 3, '2023-08-15', 'Female', '2005-09-15', NULL, 'In Progress');
 
 -- 6. Insert Courses
 -- Department 1 Courses
