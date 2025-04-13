@@ -38,7 +38,8 @@ CREATE TABLE Students (
   dateOfJoining  date NOT NULL,
   gender varchar(10) CHECK (gender IN ('Male', 'Female', 'Other')),
   dob date NOT NULL,
-  graduated int NOT NULL CHECK (graduated IN (1,0))
+  dateOfGraduation date CHECK (dateOfGraduation>dateOfJoining),
+  graduationStatus varchar(20) CHECK(graduationStatus in ('Graduated','In Progress','Discontinued', 'Max years exceeded'))
 );
 
 CREATE TABLE Courses (
