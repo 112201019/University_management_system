@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Course Registration Control</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin/course_registration.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Course Registration Window</h1>
+        <p>Current Status: 
+            <span class="{{ 'status-open' if enroll_status else 'status-closed' }}">
+                {{ 'OPEN' if enroll_status else 'CLOSED' }}
+            </span>
+        </p>
+        <form method="POST">
+            <button type="submit" class="toggle-btn">
+                {{ 'Close Registration' if enroll_status else 'Open Registration' }}
+            </button>
+        </form>
+    </div>
+</body>
+</html>

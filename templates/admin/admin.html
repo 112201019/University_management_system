@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard</title>
+  <link rel="stylesheet" href="../../static/css/admin/style.css" />
+</head>
+
+<body>
+  <header>
+    <h1>Welcome Back,  <span class="admin-name">{{ username }}</span>!</h1>
+    <div class="user-dropdown">
+      <button class="dropdown-btn">
+        <div class="profile-avatar">👤</div>
+        <span class="dropdown-arrow">▼</span>
+      </button>
+      <div class="dropdown-content">
+        <a href="{{ url_for('logout') }}" class="logout-option">
+          <div class="icon">🚪</div>
+          <span>Logout</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="welcome-message">
+      <h2>Your Administrative Portal</h2>
+      <p>Manage students, professors, courses, and enrollments from here</p>
+    </div>
+
+    <div class="dashboard">
+      <div class="dashboard-item">
+        <a href="{{ url_for('admin_student') }}">
+          <div class="icon">👥</div>
+          <div class="title">Students</div>
+        </a>
+      </div>
+      <div class="dashboard-item">
+        <a href="{{ url_for('admin_professor') }}">
+          <div class="icon">👨‍🏫</div>
+          <div class="title">Professor</div>
+        </a>
+      </div>
+      <div class="dashboard-item">
+        <a href="{{ url_for('admin_course') }}">
+          <div class="icon">📚</div>
+          <div class="title">Courses</div>
+        </a>
+      </div>
+      <div class="dashboard-item">
+        <a href="{{ url_for('course_registration1') }}">
+          <div class="icon">📝</div>
+          <div class="title">Course registration</div>
+        </a>
+      </div>
+      
+    </div>
+  </div>
+
+  <script>
+    // Toggle dropdown menu
+    document.querySelector('.dropdown-btn').addEventListener('click', function () {
+      document.querySelector('.dropdown-content').classList.toggle('show');
+    });
+
+    // Close the dropdown if clicked outside
+    window.addEventListener('click', function (event) {
+      if (!event.target.matches('.dropdown-btn') &&
+          !event.target.matches('.dropdown-arrow') &&
+          !event.target.matches('.profile-avatar')) {
+        const dropdown = document.querySelector('.dropdown-content');
+        if (dropdown.classList.contains('show')) {
+          dropdown.classList.remove('show');
+        }
+      }
+    });
+  </script>
+</body>
+
+</html>

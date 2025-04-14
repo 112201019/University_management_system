@@ -232,3 +232,114 @@ VALUES
 CREATE ROLE student;
 CREATE ROLE professor;
 CREATE ROLE admin;
+
+-- 1. Function to generate the next student ID
+CREATE OR REPLACE FUNCTION get_next_student_id()
+RETURNS INT AS $$
+DECLARE
+    next_id INT;
+BEGIN
+    SELECT COALESCE(MAX(studentId), 2000000) + 1 INTO next_id FROM Students;
+    RETURN next_id;
+END;
+$$ LANGUAGE plpgsql;
+
+2. Function to insert a new student
+CREATE OR REPLACE FUNCTION insert_student(
+    p_studentName VARCHAR(100),
+    p_degreeId INT,
+    p_departmentId INT,
+    p_dateOfJoining DATE,
+    p_gender VARCHAR(10),
+    p_dob DATE,
+    p_dateOfGraduation DATE,
+    p_graduationStatus VARCHAR(20)
+)
+RETURNS VOID AS $$
+DECLARE
+    v_studentId INT;
+BEGIN
+    -- Get next available student ID
+    v_studentId := get_next_student_id();
+    
+    -- Insert into Students table
+    INSERT INTO Students (studentId, studentName, degreeId, departmentId, 
+                        dateOfJoining, gender, dob, dateOfGraduation, graduationStatus)
+    VALUES (v_studentId, p_studentName, p_degreeId, p_departmentId, 
+            p_dateOfJoining, p_gender, p_dob, p_dateOfGraduation, p_graduationStatus);
+END;
+$$ LANGUAGE plpgsql;
+
+3. Trigger function to create login credentials
+CREATE OR REPLACE FUNCTION create_student_login()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Insert into UserLogin with student ID as password
+    INSERT INTO UserLogin (role, userId, password)
+    VALUES ('student', NEW.studentId, NEW.studentId::VARCHAR);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 4. Create the trigger
+CREATE OR REPLACE TRIGGER student_after_insert
+AFTER INSERT ON Students
+FOR EACH ROW
+EXECUTE FUNCTION create_student_login();
+
+-- SELECT insert_student(
+--     'Varun Sai'::VARCHAR(100),  -- studentName
+--     1::INTEGER,                 -- degreeId (B.Tech)
+--     1::INTEGER,                 -- departmentId (Computer Science)
+--     '2022-10-22'::DATE,         -- dateOfJoining
+--     'Male'::VARCHAR(10),        -- gender
+--     '2004-05-16'::DATE,         -- dob
+--     NULL::DATE,                 -- dateOfGraduation
+--     'In Progress'::VARCHAR(20)  -- graduationStatus
+-- );
+
+1. Create trigger function to remove login credentials
+CREATE OR REPLACE FUNCTION delete_user_credentials()
+RETURNS TRIGGER AS $$
+BEGIN
+    DELETE FROM UserLogin WHERE userId = OLD.studentId;
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 2. Create trigger to execute before student deletion
+CREATE TRIGGER delete_student_credentials
+BEFORE DELETE ON Students
+FOR EACH ROW
+EXECUTE FUNCTION delete_user_credentials();
+
+-- 3. Create delete function for students
+CREATE OR REPLACE FUNCTION delete_student(p_student_id INT)
+RETURNS VOID AS $$
+BEGIN
+    -- First delete grades and enrollments
+    DELETE FROM StudentGrades
+    WHERE enrollmentId IN (
+        SELECT enrollmentId FROM Enrollment WHERE studentId = p_student_id
+    );
+    
+    DELETE FROM Enrollment WHERE studentId = p_student_id;
+    
+    -- Then delete the student (will trigger login deletion)
+    DELETE FROM Students WHERE studentId = p_student_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- SELECT insert_student(
+--     'Shankar dhadha MBBS'::VARCHAR(100),  -- studentName
+--     1::INTEGER,                 -- degreeId (B.Tech)
+--     1::INTEGER,                 -- departmentId (Computer Science)
+--     '2022-10-22'::DATE,         -- dateOfJoining
+--     'Male'::VARCHAR(10),        -- gender
+--     '1984-05-16'::DATE,         -- dob
+--     NULL::DATE,                 -- dateOfGraduation
+--     'In Progress'::VARCHAR(20)  -- graduationStatus
+-- );
+
+-- SELECT * FROM userLogin;
+-- SELECT delete_student(2000011);

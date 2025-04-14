@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Delete Student</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='./css/admin/style2.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Delete Student</h1>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST">
+            <div class="form-group">
+                <label for="student_id">Student ID:</label>
+                <input type="number" id="student_id" name="student_id" required>
+            </div>
+            <button type="submit" class="danger">Delete Student</button>
+        </form>
+    </div>
+</body>
+</html>
