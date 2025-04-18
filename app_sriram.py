@@ -646,4 +646,4 @@ def del_student():
 def AorD():
     return render_template('./admin/student/AorD.html')
 if __name__ == '__main__':
-    app.run(debug=True, host='10.32.8.88', port=5000)
+    app.run(debug=True)
