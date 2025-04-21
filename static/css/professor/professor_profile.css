@@ -1,0 +1,273 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: #f5f5f5;
+}
+
+header {
+    background-color: #2c3e50;
+    color: white;
+    padding: 1.5rem;
+    text-align: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+header h1 {
+    margin: 0;
+}
+
+/* Profile menu styles - same as student.css */
+.profile-menu {
+    position: absolute;
+    right: 2rem;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.profile-icon-wrapper {
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+
+.profile-icon-wrapper:hover {
+    background-color: rgba(255, 255, 255, 0.25);
+}
+
+.profile-icon {
+    font-size: 1.8rem;
+    color: white;
+}
+
+.dropdown {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 0.7rem);
+    background-color: white;
+    min-width: 220px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    border-radius: 12px;
+    z-index: 10;
+    overflow: hidden;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.dropdown.show {
+    display: block;
+    animation: fadeIn 0.25s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-15px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dropdown a {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1.2rem;
+    text-decoration: none;
+    color: #2c3e50;
+    transition: all 0.2s;
+    font-weight: 500;
+}
+
+.dropdown a:hover {
+    background-color: #f8f9fa;
+}
+
+.dropdown a i {
+    font-size: 1.1rem;
+    margin-right: 1rem;
+    color: #3498db;
+    width: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dropdown-divider {
+    height: 1px;
+    background-color: #eaeaea;
+    margin: 0.2rem 1rem;
+}
+
+.logout-option {
+    color: #e74c3c !important;
+}
+
+.logout-option i {
+    color: #e74c3c !important;
+}
+
+/* Add a subtle pointer triangle to the dropdown */
+.dropdown::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    right: 18px;
+    width: 16px;
+    height: 16px;
+    background-color: white;
+    transform: rotate(45deg);
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    border-left: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.student-name {
+    font-weight: bold;
+    color: #f39c12;
+}
+
+/* Profile specific styles */
+.profile-header {
+    background-color: white;
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.profile-avatar {
+    width: 120px;
+    height: 120px;
+    background-color: #3498db;
+    color: white;
+    border-radius: 50%;
+    margin: 0 auto 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
+}
+
+.profile-avatar i {
+    font-size: 4rem;
+}
+
+.profile-header h2 {
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+    color: #2c3e50;
+}
+
+.student-id {
+    font-size: 1.1rem;
+    color: #7f8c8d;
+}
+
+.profile-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.profile-card {
+    background-color: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+    background-color: #2c3e50;
+    color: white;
+    padding: 1rem 1.5rem;
+}
+
+.card-header h3 {
+    display: flex;
+    align-items: center;
+    font-size: 1.2rem;
+}
+
+.card-header h3 i {
+    margin-right: 0.8rem;
+    color: #3498db;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+.info-row {
+    display: flex;
+    margin-bottom: 1rem;
+    padding-bottom: 0.8rem;
+    border-bottom: 1px solid #eaeaea;
+}
+
+.info-row:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.info-label {
+    width: 40%;
+    font-weight: 600;
+    color: #7f8c8d;
+}
+
+.info-value {
+    width: 60%;
+    color: #2c3e50;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    header {
+        padding: 1rem;
+    }
+
+    .profile-menu {
+        position: absolute;
+        right: 1rem;
+    }
+
+    .profile-content {
+        grid-template-columns: 1fr;
+    }
+
+    .info-row {
+        flex-direction: column;
+    }
+
+    .info-label,
+    .info-value {
+        width: 100%;
+    }
+
+    .info-label {
+        margin-bottom: 0.3rem;
+    }
+}

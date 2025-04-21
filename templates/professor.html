@@ -9,25 +9,41 @@
 </head>
 <body>
   <header>
-    <h1>Professor Dashboard</h1>
+    <h1>Welcome Back, <span class="student-name">{{ username }}</span>!</h1>
     <div class="profile-menu">
-      <i class="fas fa-user-circle profile-icon" onclick="toggleDropdown()"></i>
-      <div class="dropdown" id="dropdownMenu">
-        <a href="/professor/profile">View Profile</a>
-        <a href="/professor/settings">Settings</a>
-        <a href="{{ url_for('logout') }}">Logout</a>
-      </div>
+        <div class="profile-icon-wrapper" onclick="toggleDropdown()">
+            <i class="fas fa-user-circle profile-icon"></i>
+        </div>
+        <div class="dropdown" id="dropdownMenu">
+            <a href="{{ url_for('professor_dashboard') }}">
+                <i class="fas fa-home"></i>
+                <span>Home</span>
+            </a>
+            <a href="{{ url_for('view_profile_professor') }}">
+                <i class="fas fa-user"></i>
+                <span>Profile</span>
+            </a>
+            <div class="dropdown-divider"></div>
+            <a href="{{ url_for('logout') }}" class="logout-option">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
+            </a>
+        </div>
     </div>
   </header>
 
   <div class="container">
-    <div class="welcome-message">
+    <!-- <div class="welcome-message">
       Welcome, Professor <span class="professor-name">{{ username }}</span>!
+    </div> -->
+    <div class="welcome-message">
+      <h2>Your Academic Portal</h2>
+      <p>Access all your academic information and resources in one place</p>
     </div>
 
     <div class="dashboard">
       <div class="dashboard-item">
-        <a href="/professor/courses">
+        <a href="{{ url_for('professor_courses')}}">
           <i class="fas fa-book icon"></i>
           <div class="title">My Courses</div>
         </a>
@@ -50,21 +66,21 @@
   </div>
 
   <script>
+    // Toggle dropdown function
     function toggleDropdown() {
-      document.getElementById('dropdownMenu').classList.toggle('show');
+        document.getElementById('dropdownMenu').classList.toggle('show');
     }
 
-    window.onclick = function(event) {
-      if (!event.target.matches('.profile-icon')) {
-        const dropdowns = document.getElementsByClassName("dropdown");
-        for (let i = 0; i < dropdowns.length; i++) {
-          const openDropdown = dropdowns[i];
-          if (openDropdown.classList.contains('show')) {
-            openDropdown.classList.remove('show');
-          }
+    // Close the dropdown if clicked outside
+    window.addEventListener('click', function (event) {
+        if (!event.target.matches('.profile-icon') &&
+            !event.target.matches('.profile-icon-wrapper')) {
+            const dropdown = document.getElementById('dropdownMenu');
+            if (dropdown.classList.contains('show')) {
+                dropdown.classList.remove('show');
+            }
         }
-      }
-    }
+    });
   </script>
 </body>
 </html>

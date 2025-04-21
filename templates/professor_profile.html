@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Professor Profile</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/professor/professor_profile.css') }}">
+</head>
+<body>
+  <header>
+    <h1>Professor Profile: <span class="professor-name">{{ professor.professorName }}</span></h1>
+    <div class="profile-menu">
+      <div class="profile-icon-wrapper" onclick="toggleDropdown()">
+        <i class="fas fa-user-circle profile-icon"></i>
+      </div>
+      <div class="dropdown" id="dropdownMenu">
+        <a href="{{ url_for('professor_dashboard') }}">
+          <i class="fas fa-home"></i>
+          <span>Home</span>
+        </a>
+        <a href="{{ url_for('view_profile') }}">
+          <i class="fas fa-user"></i>
+          <span>Profile</span>
+        </a>
+        <div class="dropdown-divider"></div>
+        <a href="{{ url_for('logout') }}" class="logout-option">
+          <i class="fas fa-sign-out-alt"></i>
+          <span>Logout</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="profile-header">
+      <div class="profile-avatar">
+        <i class="fas fa-chalkboard-user"></i>
+        <!-- fa-user-tie -->
+      </div>
+      <h2>{{ professor.professorName }}</h2>
+      <p class="professor-id">Professor ID: <span>{{ professor.professorId }}</span></p>
+    </div>
+
+    <div class="profile-content">
+      <div class="profile-card personal-info">
+        <div class="card-header">
+          <h3><i class="fas fa-info-circle"></i> Personal Information</h3>
+        </div>
+        <div class="card-body">
+          <div class="info-row">
+            <div class="info-label">Full Name</div>
+            <div class="info-value">{{ professor.professorName }}</div>
+          </div>
+          <div class="info-row">
+            <div class="info-label">Date of Birth</div>
+            <div class="info-value">
+              {% if professor.dob %}
+                {{ professor.dob.strftime('%B %d, %Y') }}
+              {% else %}
+                Not available
+              {% endif %}
+            </div>
+          </div>
+          <div class="info-row">
+            <div class="info-label">Gender</div>
+            <div class="info-value">{{ professor.gender }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="profile-card academic-info">
+        <div class="card-header">
+          <h3><i class="fas fa-building"></i> Academic Details</h3>
+        </div>
+        <div class="card-body">
+          <div class="info-row">
+            <div class="info-label">Department</div>
+            <div class="info-value">{{ department_name }}</div>
+          </div>
+          <div class="info-row">
+            <div class="info-label">Head of Department</div>
+            <div class="info-value">{{ head_name }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function toggleDropdown() {
+      document.getElementById('dropdownMenu').classList.toggle('show');
+    }
+
+    window.addEventListener('click', function(event) {
+      if (!event.target.matches('.profile-icon') &&
+          !event.target.matches('.profile-icon-wrapper')) {
+        const dropdown = document.getElementById('dropdownMenu');
+        if (dropdown.classList.contains('show')) {
+          dropdown.classList.remove('show');
+        }
+      }
+    });
+  </script>
+</body>
+</html>

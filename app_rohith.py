@@ -105,11 +105,10 @@ def login():
                 return redirect(url_for('student_dashboard', username=session.get('username')))
             
             elif role == 'professor':
-                query=f"""
-                    SELECT professorName FROM Professors WHERE professorId= {user_id};
-                """
-                session['username'] =  db.execute_dql_commands(query).fetchone()[0]
-                return redirect(url_for('professor_dashboard'))
+                query = "SELECT professorName FROM Professors WHERE professorId = :user_id"
+                session['username'] = db.execute_dql_commands(query, {'user_id': user_id}).fetchone()[0]
+                session['user_id'] = user_id
+                return redirect(url_for('professor_dashboard', username=session.get('username')))
         else:
             flash('Invalid credentials')
             return redirect(url_for('login'))
@@ -132,6 +131,93 @@ def professor_dashboard():
     if session.get('role') != 'professor':
         return redirect(url_for('login'))
     return render_template('professor.html', username=session.get('username'))
+
+@app.route('/professor/courses')
+def professor_courses():
+    if session.get('role') != 'professor':
+        return redirect(url_for('login'))
+    
+    professor_id = session.get('user_id')
+    if not professor_id:
+        flash('Session expired. Please login again.')
+        return redirect(url_for('login'))
+
+    # Query the Courses table for courses taught by the professor.
+    query = """
+        SELECT 
+            c.courseId AS "courseId", 
+            c.courseName AS "courseName", 
+            c.credits AS "credits", 
+            d.deptName AS "deptName", 
+            at.termName AS "termName",
+            c.coursetype "courseType"
+        FROM Enrollment e
+        JOIN CourseOffering co ON e.offeringId = co.offeringId
+        JOIN Courses c ON co.courseId = c.courseId
+        JOIN Department d ON c.departmentId = d.departmentId
+        JOIN AcademicTerm at ON co.termId = at.termId
+        JOIN Professors p ON co.professorId = p.professorId
+        WHERE p.professorId = :professor_id
+    """
+    result = db.execute_dql_commands(query, {'professor_id': professor_id})
+    courses = result.mappings().all()
+
+    return render_template("professor_courses.html", username=session.get("username"), courses=courses)
+
+
+
+
+@app.route("/professor/profile")
+def view_profile_professor():
+    if session.get('role') != 'professor':
+        return redirect(url_for('login'))
+
+    professor_id = session.get('user_id')
+    if not professor_id:
+        flash('Session expired. Please login again.')
+        return redirect(url_for('login'))
+
+    # Get basic professor info
+    professor_query = """
+        SELECT 
+            professorId AS "professorId",
+            professorName AS "professorName",
+            departmentId AS "departmentId",
+            dob,
+            gender
+        FROM Professors
+        WHERE professorId = :professor_id
+    """
+    professor_result = db.execute_dql_commands(professor_query, {'professor_id': professor_id})
+    professor = professor_result.mappings().first()
+
+    if not professor:
+        flash('Professor information not found')
+        return redirect(url_for('professor_dashboard'))
+
+    # Get department name and head of department name
+    dept_query = """
+        SELECT 
+            d.deptName AS "deptName",
+            p.professorName AS "headName"
+        FROM Department d
+        LEFT JOIN Professors p ON d.headOfDeptId = p.professorId
+        WHERE d.departmentId = :dept_id
+    """
+    dept_result = db.execute_dql_commands(dept_query, {'dept_id': professor['departmentId']})
+    dept_row = dept_result.mappings().first()
+    department_name = dept_row['deptName'] if dept_row else "Not assigned"
+    head_name = dept_row['headName'] if dept_row and dept_row['headName'] else "Not Assigned"
+
+    return render_template(
+        './professor_profile.html',
+        username=session.get('username'),
+        professor=professor,
+        department_name=department_name,
+        head_name=head_name
+    )
+
+
 
 @app.route('/logout')
 def logout():
