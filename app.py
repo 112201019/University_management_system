@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from sqlalchemy import text
 from sqlalchemy.engine import create_engine
+from datetime import date  # Import to get current date
 
 # --- Database Utility Class ---
 class PostgresqlDB:
@@ -150,7 +151,7 @@ def course_registration():
         return redirect(url_for("login"))
     return render_template("./student/course_registration.html", username=session.get("username"))
 
-@app.route('/student/courses')
+@app.route('/student/courses', methods=['GET'])
 def view_courses():
     if session.get('role') != 'student':
         return redirect(url_for("login"))
@@ -160,45 +161,88 @@ def view_courses():
         flash('Session expired. Please login again.')
         return redirect(url_for('login'))
 
-    student_dept_query = """
-        SELECT departmentId
+    student_query = """
+        SELECT 
+            departmentId as "departmentId", 
+            dateOfJoining as "dateOfJoining",
+            dateOfGraduation as "dateOfGraduation"
         FROM Students
         WHERE studentId = :student_id
     """
-    student_dept_result = db.execute_dql_commands(student_dept_query, {'student_id': user_id})
-    student_dept_row = student_dept_result.fetchone()
-    student_dept = student_dept_row[0] if student_dept_row else None
-
-    if student_dept is None:
-        flash('Student department information not found.')
+    student_row = db.execute_dql_commands(student_query, {'student_id': user_id}).fetchone()
+    if not student_row:
+        flash('Student information not found.')
         return redirect(url_for('student_dashboard'))
 
-    query = """
-        SELECT 
-            c.courseId AS "courseId", 
-            c.courseName AS "courseName", 
-            c.credits AS "credits", 
-            d.deptName AS "deptName", 
-            at.termName AS "termName", 
-            p.professorName AS "professorName",
-            CASE 
-                WHEN c.departmentId = :student_dept THEN 'Core Course' 
-                ELSE 'Elective Course' 
-            END AS "courseType"
-        FROM Enrollment e
-        JOIN CourseOffering co ON e.offeringId = co.offeringId
-        JOIN Courses c ON co.courseId = c.courseId
-        JOIN Department d ON c.departmentId = d.departmentId
-        JOIN AcademicTerm at ON co.termId = at.termId
-        JOIN Professors p ON co.professorId = p.professorId
-        WHERE e.studentId = :student_id AND e.status = 'Approved'
-    """
-    result = db.execute_dql_commands(query, {'student_id': user_id, 'student_dept': student_dept})
-    courses = result.mappings().all()
-    
-    return render_template("./student/courses.html",
-                           username=session.get('username'),
-                           courses=courses)
+    student_dept, date_of_joining, date_of_graduation = student_row
+
+    if date_of_graduation is None:
+        terms_query = """
+            SELECT 
+                termId as "termId", 
+                termName as "termName"
+            FROM AcademicTerm
+            WHERE startDate >= :date_of_joining
+            ORDER BY startDate DESC
+        """
+        query_params = {'date_of_joining': date_of_joining}
+    else:
+        terms_query = """
+            SELECT 
+                termId as "termId", 
+                termName as "termName"
+            FROM AcademicTerm
+            WHERE startDate >= :date_of_joining
+              AND endDate <= :date_of_graduation
+            ORDER BY startDate DESC
+        """
+        query_params = {'date_of_joining': date_of_joining, 'date_of_graduation': date_of_graduation}
+
+    terms_result = db.execute_dql_commands(terms_query, query_params)
+    terms = terms_result.mappings().all()
+
+    selected_term_id = request.args.get('term_id')
+
+    if selected_term_id:
+        query = """
+            SELECT 
+                c.courseId AS "courseId", 
+                c.courseName AS "courseName", 
+                c.credits AS "credits", 
+                d.deptName AS "deptName", 
+                at.termName AS "termName", 
+                p.professorName AS "professorName",
+                CASE 
+                    WHEN c.departmentId = :student_dept THEN 'Core Course' 
+                    ELSE 'Elective Course' 
+                END AS "courseType"
+            FROM Enrollment e
+            JOIN CourseOffering co ON e.offeringId = co.offeringId
+            JOIN Courses c ON co.courseId = c.courseId
+            JOIN Department d ON c.departmentId = d.departmentId
+            JOIN AcademicTerm at ON co.termId = at.termId
+            JOIN Professors p ON co.professorId = p.professorId
+            WHERE e.studentId = :student_id 
+              AND e.status = 'Approved'
+              AND at.termId = :selected_term_id;
+        """
+        courses_result = db.execute_dql_commands(query, {
+            'student_id': user_id,
+            'student_dept': student_dept,
+            'selected_term_id': selected_term_id
+        })
+    else:
+        courses_result = None
+
+    courses = courses_result.mappings().all() if courses_result else []
+
+    return render_template(
+        "./student/courses.html",
+        username=session.get('username'),
+        courses=courses,
+        terms=terms,
+        selected_term_id=int(selected_term_id) if selected_term_id else None
+    )
 
 
 @app.route("/student/profile")
@@ -220,7 +264,7 @@ def view_profile():
             dateOfJoining AS "dateOfJoining",
             gender,
             dob,
-            graduated
+            graduationStatus AS "graduationStatus"
         FROM Students
         WHERE studentId = :student_id
     """
