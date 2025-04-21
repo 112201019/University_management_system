@@ -132,7 +132,7 @@ def professor_dashboard():
         return redirect(url_for('login'))
     return render_template('professor.html', username=session.get('username'))
 
-@app.route('/professor/courses')
+@app.route('/professor/courses', methods=['GET'])
 def professor_courses():
     if session.get('role') != 'professor':
         return redirect(url_for('login'))
@@ -141,28 +141,49 @@ def professor_courses():
     if not professor_id:
         flash('Session expired. Please login again.')
         return redirect(url_for('login'))
+    terms_query = """
+            SELECT 
+                termId as "termId", 
+                termName as "termName"
+            FROM AcademicTerm
+            ORDER BY startDate DESC
+        """
+    terms_result = db.execute_dql_commands(terms_query)
+    terms = terms_result.mappings().all()
 
+    selected_term_id = request.args.get('term_id')
+    if selected_term_id:
     # Query the Courses table for courses taught by the professor.
-    query = """
-        SELECT 
-            c.courseId AS "courseId", 
-            c.courseName AS "courseName", 
-            c.credits AS "credits", 
-            d.deptName AS "deptName", 
-            at.termName AS "termName",
-            c.coursetype "courseType"
-        FROM Enrollment e
-        JOIN CourseOffering co ON e.offeringId = co.offeringId
-        JOIN Courses c ON co.courseId = c.courseId
-        JOIN Department d ON c.departmentId = d.departmentId
-        JOIN AcademicTerm at ON co.termId = at.termId
-        JOIN Professors p ON co.professorId = p.professorId
-        WHERE p.professorId = :professor_id
-    """
-    result = db.execute_dql_commands(query, {'professor_id': professor_id})
-    courses = result.mappings().all()
+        query = """
+            SELECT 
+                c.courseId AS "courseId", 
+                c.courseName AS "courseName", 
+                c.credits AS "credits", 
+                d.deptName AS "deptName", 
+                at.termName AS "termName",
+                c.coursetype AS "courseType"
+            FROM Enrollment e
+            JOIN CourseOffering co ON e.offeringId = co.offeringId
+            JOIN Courses c ON co.courseId = c.courseId
+            JOIN Department d ON c.departmentId = d.departmentId
+            JOIN AcademicTerm at ON co.termId = at.termId
+            JOIN Professors p ON co.professorId = p.professorId
+            WHERE p.professorId = :professor_id
+            AND at.termId = :selected_term_id;
+        """
+        result = db.execute_dql_commands(query,
+                         {'professor_id': professor_id,
+                          'selected_term_id': selected_term_id})
+    else :
+        result = None
+    courses = result.mappings().all() if result else []
 
-    return render_template("professor_courses.html", username=session.get("username"), courses=courses)
+    return render_template("professor_courses.html", 
+                           username=session.get("username"), 
+                           courses=courses,
+                           terms=terms,
+                           selected_term_id=int(selected_term_id) if selected_term_id else None
+                           )
 
 
 

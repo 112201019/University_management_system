@@ -37,9 +37,25 @@
   <div class="container">
     <div class="page-header">
       <h2>Courses Taught</h2>
-      <p>Below is the list of courses you are teaching</p>
+      <p>Select a term to view your enrolled courses</p>
+    </div>
+    <!-- Added Dropdown for Term Filtering -->
+    <div class="term-filter">
+      <form method="GET" action="{{ url_for('professor_courses') }}">
+          <label for="termSelect">Filter by Term:</label>
+          <select name="term_id" id="termSelect" onchange="this.form.submit()">
+              <option value="">-- Select Term --</option>
+              {% for term in terms %}
+                  <option value="{{ term.termId }}"
+                      {% if selected_term_id and term.termId == selected_term_id %}selected{% endif %}>
+                      {{ term.termName }}
+                  </option>
+              {% endfor %}
+          </select>
+      </form>
     </div>
 
+  <!-- Courses Grid -->
     <div class="courses-grid">
       {% if courses %}
         {% for course in courses %}
