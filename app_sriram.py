@@ -285,10 +285,6 @@ def course_registration1():
 def admin_student():
     return render_template('./admin/student/student.html')
 
-@app.route('/admin_professor', methods=['GET','POST'])
-def admin_professor():
-    return render_template('./admin/professor/professor.html')
-
 @app.route('/admin_course', methods=['GET','POST'])
 def admin_course():
     return render_template('./admin/courses/courses.html')
@@ -645,5 +641,191 @@ def del_student():
 @app.route('/AorDstudent', methods=['GET'])
 def AorD():
     return render_template('./admin/student/AorD.html')
+
+
+
+@app.route('/admin_professor', methods=['GET','POST'])
+def admin_professor():
+    return render_template('./admin/professor/professor.html')
+
+@app.route('/admin_professor/a_d')
+def add_or_delete_professors():
+    return render_template('./admin/professor/AorD_professors.html')
+
+# —————— Professor Management ——————
+
+@app.route('/admin_professor/view_all_professors', methods=['GET', 'POST'])
+def view_all_professors():
+    # get filter
+    dept_filter = request.args.get('department', 'all')
+
+    # fetch departments for dropdown
+    dept_sql = "SELECT departmentId, deptName FROM Department ORDER BY deptName"
+    depts = [{'departmentId': r[0], 'deptName': r[1]} for r in db.execute_dql_commands(dept_sql)]
+
+    # base professor query
+    prof_sql = """
+        SELECT p.professorId,
+               p.professorName,
+               p.dob,
+               p.gender,
+               dept.deptName
+        FROM Professors p
+        JOIN Department dept ON p.departmentId = dept.departmentId
+    """
+    where = []
+    if dept_filter != 'all':
+        try:
+            did = int(dept_filter)
+            where.append(f"p.departmentId = {did}")
+        except ValueError:
+            pass
+    if where:
+        prof_sql += " WHERE " + " AND ".join(where)
+    prof_sql += " ORDER BY p.professorName"
+
+    rows = db.execute_dql_commands(prof_sql)
+    profs = []
+    for r in rows:
+        profs.append({
+            'professorId': r[0],
+            'professorName': r[1],
+            'dob': r[2].strftime('%d-%m-%Y'),
+            'gender': r[3],
+            'deptName': r[4]
+        })
+
+    return render_template(
+        'admin/professor/view_all_professors.html',
+        professors=profs,
+        departments=depts,
+        selected_department=dept_filter
+    )
+# —————— Professor Management ——————
+
+@app.route('/admin_professor/view_professor/<int:professor_id>')
+def view_professor(professor_id):
+    # fetch professor + dept
+    sql = """
+      SELECT p.professorId, p.professorName, p.dob, p.gender, dept.deptName
+      FROM Professors p
+      JOIN Department dept ON p.departmentId = dept.departmentId
+      WHERE p.professorId = :pid
+    """
+    row = db.execute_dql_commands(sql, {'pid': professor_id}).fetchone()
+    if not row:
+        flash(f"Professor {professor_id} not found", "danger")
+        return redirect(url_for('view_all_professors'))
+
+    prof = {
+        'professorId': row[0],
+        'professorName': row[1],
+        'dob': row[2].strftime('%d-%m-%Y'),
+        'gender': row[3],
+        'deptName': row[4]
+    }
+
+    # check if this prof is HOD
+    hod_row = db.execute_dql_commands(
+      "SELECT 1 FROM Department WHERE headOfDeptId = :pid",
+      {'pid': professor_id}
+    ).fetchone()
+    is_hod = bool(hod_row)
+
+    return render_template(
+      'admin/professor/view_professors.html',
+      professor=prof,
+      is_hod=is_hod
+    )
+
+
+
+@app.route('/admin_professor/edit_professor/<int:professor_id>')
+def edit_professor(professor_id):
+    # 1) Fetch departments
+    depts = [
+      {'departmentId': r[0], 'deptName': r[1]}
+      for r in db.execute_dql_commands(
+        "SELECT departmentId, deptName FROM Department ORDER BY deptName"
+      )
+    ]
+
+    # 2) Fetch professor data
+    sql = """
+      SELECT professorId, professorName, departmentId, dob, gender
+      FROM Professors
+      WHERE professorId = :pid
+    """
+    row = db.execute_dql_commands(sql, {'pid': professor_id}).fetchone()
+    if not row:
+        flash(f"Professor {professor_id} not found", "danger")
+        return redirect(url_for('view_all_professors'))
+
+    prof = {
+        'professorId':    row[0],
+        'professorName':  row[1],
+        'departmentId':   row[2],
+        'dob_raw':        row[3].strftime('%Y-%m-%d'),
+        'gender':         row[4]
+    }
+
+    # 3) Check if this professor is a Head of any department
+    hod_row = db.execute_dql_commands(
+      "SELECT 1 FROM Department WHERE headOfDeptId = :pid",
+      {'pid': professor_id}
+    ).fetchone()
+    is_hod = bool(hod_row)  # True if professor is HOD
+
+    return render_template(
+        'admin/professor/edit_professor.html',
+        professor=prof,
+        departments=depts,
+        is_hod=is_hod
+    )
+
+
+@app.route('/admin_professor/update_professor/<int:professor_id>', methods=['POST'])
+def update_professor(professor_id):
+    name    = request.form['professorName']
+    dob     = request.form['dob']
+    gender  = request.form['gender']
+
+    # Determine department: if HOD, keep original; otherwise accept form value
+    hod_row = db.execute_dql_commands(
+      "SELECT departmentId FROM Department WHERE headOfDeptId = :pid",
+      {'pid': professor_id}
+    ).fetchone()
+
+    if hod_row:
+        # professor is HOD → preserve original departmentId
+        dept_id = db.execute_dql_commands(
+          "SELECT departmentId FROM Professors WHERE professorId = :pid",
+          {'pid': professor_id}
+        ).fetchone()[0]
+        flash("As Head of Department, your department cannot be changed.", "info")
+    else:
+        dept_id = request.form['departmentId']
+
+    # Perform update
+    sql = """
+      UPDATE Professors
+      SET professorName = :name,
+          departmentId = :dept,
+          dob          = :dob,
+          gender       = :gender
+      WHERE professorId = :pid
+    """
+    db.execute_ddl_and_dml_commands(sql, {
+        'name':   name,
+        'dept':   dept_id,
+        'dob':    dob,
+        'gender': gender,
+        'pid':    professor_id
+    })
+
+    flash("Professor information updated successfully!", "success")
+    return redirect(url_for('view_professor', professor_id=professor_id))
+
 if __name__ == '__main__':
     app.run(debug=True)
+add_or_delete_professors

@@ -200,4 +200,18 @@
       grid-template-columns: 1fr;
     }
   }
+  .detail-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+  }
+  .detail-table th, .detail-table td {
+    padding: .75rem 1rem;
+    border: 1px solid #eaeaea;
+  }
+  .detail-table th {
+    background: #2c3e50; color: #fff;
+    width: 30%;
+    text-align: left;
+  }
   
