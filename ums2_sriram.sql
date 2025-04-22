@@ -26,7 +26,8 @@ CREATE TABLE Professors (
   departmentId int NOT NULL, 
   professorName varchar(100) NOT NULL,
   dob date NOT NULL,
-  gender varchar(10) CHECK (gender IN ('Male', 'Female', 'Other'))
+  gender varchar(10) CHECK (gender IN ('Male', 'Female', 'Other')),
+  WorkingStatus varchar(10) CHECK (WorkingStatus IN ('Active', 'Departed'))
 );
 
 -- Students: Standardize column names (deptId → departmentId)
@@ -38,7 +39,8 @@ CREATE TABLE Students (
   dateOfJoining  date NOT NULL,
   gender varchar(10) CHECK (gender IN ('Male', 'Female', 'Other')),
   dob date NOT NULL,
-  graduated int NOT NULL CHECK (graduated IN (1,0))
+  dateOfGraduation date CHECK (dateOfGraduation>dateOfJoining),
+  graduationStatus varchar(20) NOT NULL CHECK(graduationStatus in ('Graduated','In Progress','Discontinued', 'Max years exceeded'))
 );
 
 CREATE TABLE Courses (
@@ -46,7 +48,6 @@ CREATE TABLE Courses (
   courseName varchar(100) NOT NULL,
   departmentId int NOT NULL, -- Renamed from deptId
   typeOfCourse varchar(2) NOT NULL CHECK (typeOfCourse IN ('UG', 'PG')),
-  professorId int NOT NULL,
   courseType varchar(20) CHECK (courseType IN ('Theory', 'Lab')), -- Renamed from 'type'
   credits int NOT NULL CHECK (credits > 0 AND credits <= 5)
 );
@@ -72,7 +73,7 @@ CREATE TABLE Enrollment (
   studentId int NOT NULL,
   offeringId int NOT NULL,
   enrollmentDate date NOT NULL,
-  status varchar(20) CHECK (status IN ('Approved', 'Rejected', 'Pending')),
+  status varchar(20) CHECK (status IN ('Approved', 'Rejected', 'Pending', 'Dropped')),
   UNIQUE (studentId, offeringId) -- Prevent duplicate enrollments
 );
 
@@ -111,11 +112,11 @@ VALUES
   (3, 'Electrical Engineering', NULL);
 
 -- 3. Insert Professors (one per department)
-INSERT INTO Professors (professorId, departmentId, professorName, dob, gender)
+INSERT INTO Professors (professorId, departmentId, professorName, dob, gender, WorkingStatus)
 VALUES 
-  (10001, 1, 'Dr. Alice', '1975-06-15', 'Female'),
-  (10002, 2, 'Dr. Bob', '1980-09-20', 'Male'),
-  (10003, 3, 'Dr. Carol', '1978-04-10', 'Female');
+  (10001, 1, 'Dr. Alice', '1975-06-15', 'Female', 'Active'),
+  (10002, 2, 'Dr. Bob', '1980-09-20', 'Male', 'Active'),
+  (10003, 3, 'Dr. Carol', '1978-04-10', 'Female', 'Active');
 
 -- 4. Update Departments to assign headOfDeptId from the corresponding professor
 UPDATE Department SET headOfDeptId = 10001 WHERE departmentId = 1;
@@ -123,52 +124,52 @@ UPDATE Department SET headOfDeptId = 10002 WHERE departmentId = 2;
 UPDATE Department SET headOfDeptId = 10003 WHERE departmentId = 3;
 
 -- 5. Insert Students
-INSERT INTO Students (studentId, studentName, degreeId, departmentId, dateOfJoining, gender, dob, graduated)
+INSERT INTO Students (studentId, studentName, degreeId, departmentId, dateOfJoining, gender, dob, dateOfGraduation, graduationStatus)
 VALUES 
   -- Department 1: Computer Science Engineering (all B.Tech)
-  (2000001, 'John Doe', 1, 1, '2023-08-15', 'Male', '2005-05-12', 0),
-  (2000002, 'Jane Smith', 1, 1, '2023-08-15', 'Female', '2005-11-30', 0),
+  (2000001, 'John Doe', 1, 1, '2023-08-15', 'Male', '2005-05-12', NULL, 'In Progress'),
+  (2000002, 'Jane Smith', 1, 1, '2023-08-15', 'Female', '2005-11-30', NULL, 'In Progress'),
 
   -- Department 2: Data Science Engineering (mix of B.Tech and M.Tech)
-  (2000003, 'Mike Brown', 1, 2, '2023-08-15', 'Male', '2005-03-22', 0),
-  (2000004, 'Emily White', 2, 2, '2024-01-10', 'Female', '2002-12-05', 0),
+  (2000003, 'Mike Brown', 1, 2, '2023-08-15', 'Male', '2005-03-22', NULL, 'In Progress'),
+  (2000004, 'Emily White', 2, 2, '2024-01-10', 'Female', '2002-12-05', NULL, 'In Progress'),
 
   -- Department 3: Electrical Engineering (all B.Tech)
-  (2000005, 'Robert Green', 1, 3, '2023-08-15', 'Male', '2005-07-07', 0),
-  (2000006, 'Linda Blue', 1, 3, '2023-08-15', 'Female', '2005-09-15', 0);
+  (2000005, 'Robert Green', 1, 3, '2023-08-15', 'Male', '2005-07-07', NULL, 'In Progress'),
+  (2000006, 'Linda Blue', 1, 3, '2023-08-15', 'Female', '2005-09-15', NULL, 'In Progress');
 
 -- 6. Insert Courses
 -- Department 1 Courses
-INSERT INTO Courses (courseId, courseName, departmentId, typeOfCourse, professorId, courseType, credits)
+INSERT INTO Courses (courseId, courseName, departmentId, typeOfCourse, courseType, credits)
 VALUES
-  (3000001, 'Introduction to Programming', 1, 'UG', 10001, 'Theory', 4),
-  (3000002, 'Data Structures', 1, 'UG', 10001, 'Theory', 4),
-  (3000003, 'Programming Lab', 1, 'UG', 10001, 'Lab', 2);
+  (3000001, 'Introduction to Programming', 1, 'UG', 'Theory', 4),
+  (3000002, 'Data Structures', 1, 'UG', 'Theory', 4),
+  (3000003, 'Programming Lab', 1, 'UG', 'Lab', 2);
 
 -- Department 2 Courses
-INSERT INTO Courses (courseId, courseName, departmentId, typeOfCourse, professorId, courseType, credits)
+INSERT INTO Courses (courseId, courseName, departmentId, typeOfCourse, courseType, credits)
 VALUES
-  (3000004, 'Statistics for Data Science', 2, 'UG', 10002, 'Theory', 3),
-  (3000005, 'Machine Learning Basics', 2, 'UG', 10002, 'Theory', 4),
-  (3000006, 'Data Science Lab', 2, 'UG', 10002, 'Lab', 2);
+  (3000004, 'Statistics for Data Science', 2, 'UG',  'Theory', 3),
+  (3000005, 'Machine Learning Basics', 2, 'UG',  'Theory', 4),
+  (3000006, 'Data Science Lab', 2, 'UG', 'Lab', 2);
 
 -- Department 3 Courses
 INSERT INTO Courses (courseId, courseName, departmentId, typeOfCourse, professorId, courseType, credits)
 VALUES
-  (3000007, 'Circuits and Electronics', 3, 'UG', 10003, 'Theory', 4),
-  (3000008, 'Electrical Machines', 3, 'UG', 10003, 'Theory', 4),
-  (3000009, 'Electronics Lab', 3, 'UG', 10003, 'Lab', 2);
+  (3000007, 'Circuits and Electronics', 3, 'UG',  'Theory', 4),
+  (3000008, 'Electrical Machines', 3, 'UG',  'Theory', 4),
+  (3000009, 'Electronics Lab', 3, 'UG', 'Lab', 2);
 
 -- 7. Insert Academic Terms
 -- Ongoing term (Spring 2025: current date 2025-04-11 falls between start and end dates)
 INSERT INTO AcademicTerm (termId, termName, startDate, endDate)
 VALUES 
-  (1, 'Spring 2025', '2025-01-10', '2025-05-20');
+  (2, 'Spring 2025', '2025-01-10', '2025-05-20');
 
 -- An additional past term to support a completed enrollment and grade (Fall 2024)
 INSERT INTO AcademicTerm (termId, termName, startDate, endDate)
 VALUES 
-  (2, 'Fall 2024', '2024-09-01', '2024-12-15');
+  (1, 'Fall 2024', '2024-09-01', '2024-12-15');
 
 -- 8. Insert Course Offerings
 -- Ongoing semester offerings (termId = 1)
@@ -222,8 +223,6 @@ VALUES
   ('student', 2000004, '2000004'),
   ('student', 2000005, '2000005'),
   ('student', 2000006, '2000006'),
-  ('student', 2000007, '2000007'),
-  ('student', 2000008, '2000008'),
   ('professor', 10001, '10001'),
   ('professor', 10002, '10002'),
   ('professor', 10003, '10003'),
@@ -233,7 +232,92 @@ CREATE ROLE student;
 CREATE ROLE professor;
 CREATE ROLE admin;
 
--- 1. Function to generate the next student ID
+-- -- 1. Function to generate the next student ID
+-- CREATE OR REPLACE FUNCTION get_next_student_id()
+-- RETURNS INT AS $$
+-- DECLARE
+--     next_id INT;
+-- BEGIN
+--     SELECT COALESCE(MAX(studentId), 2000000) + 1 INTO next_id FROM Students;
+--     RETURN next_id;
+-- END;
+-- $$ LANGUAGE plpgsql;
+
+-- -- 2. Function to insert a new student
+-- CREATE OR REPLACE FUNCTION insert_student(
+--     p_studentName VARCHAR(100),
+--     p_degreeId INT,
+--     p_departmentId INT,
+--     p_dateOfJoining DATE,
+--     p_gender VARCHAR(10),
+--     p_dob DATE,
+--     p_dateOfGraduation DATE,
+--     p_graduationStatus VARCHAR(20)
+-- )
+-- RETURNS VOID AS $$
+-- DECLARE
+--     v_studentId INT;
+-- BEGIN
+--     -- Get next available student ID
+--     v_studentId := get_next_student_id();
+    
+--     -- Insert into Students table
+--     INSERT INTO Students (studentId, studentName, degreeId, departmentId, 
+--                         dateOfJoining, gender, dob, dateOfGraduation, graduationStatus)
+--     VALUES (v_studentId, p_studentName, p_degreeId, p_departmentId, 
+--             p_dateOfJoining, p_gender, p_dob, p_dateOfGraduation, p_graduationStatus);
+-- END;
+-- $$ LANGUAGE plpgsql;
+
+-- -- 3. Trigger function to create login credentials
+-- CREATE OR REPLACE FUNCTION create_student_login()
+-- RETURNS TRIGGER AS $$
+-- BEGIN
+--     -- Insert into UserLogin with student ID as password
+--     INSERT INTO UserLogin (role, userId, password)
+--     VALUES ('student', NEW.studentId, NEW.studentId::VARCHAR);
+--     RETURN NEW;
+-- END;
+-- $$ LANGUAGE plpgsql;
+
+-- -- 4. Create the trigger
+-- CREATE OR REPLACE TRIGGER student_after_insert
+-- AFTER INSERT ON Students
+-- FOR EACH ROW
+-- EXECUTE FUNCTION create_student_login();
+
+-- CREATE OR REPLACE FUNCTION delete_user_credentials()
+-- RETURNS TRIGGER AS $$
+-- BEGIN
+--     DELETE FROM UserLogin WHERE userId = OLD.studentId;
+--     RETURN OLD;
+-- END;
+-- $$ LANGUAGE plpgsql;
+
+-- -- 2. Create trigger to execute before student deletion
+-- CREATE TRIGGER delete_student_credentials
+-- BEFORE DELETE ON Students
+-- FOR EACH ROW
+-- EXECUTE FUNCTION delete_user_credentials();
+
+-- -- 3. Create delete function for students
+-- CREATE OR REPLACE FUNCTION delete_student(p_student_id INT)
+-- RETURNS VOID AS $$
+-- BEGIN
+--     -- First delete grades and enrollments
+--     DELETE FROM StudentGrades
+--     WHERE enrollmentId IN (
+--         SELECT enrollmentId FROM Enrollment WHERE studentId = p_student_id
+--     );
+    
+--     DELETE FROM Enrollment WHERE studentId = p_student_id;
+    
+--     -- Then delete the student (will trigger login deletion)
+--     DELETE FROM Students WHERE studentId = p_student_id;
+-- END;
+-- $$ LANGUAGE plpgsql;
+
+-- 1. Function to get next student ID
 CREATE OR REPLACE FUNCTION get_next_student_id()
 RETURNS INT AS $$
 DECLARE
@@ -244,8 +328,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-2. Function to insert a new student
-CREATE OR REPLACE FUNCTION insert_student(
+-- 2. Procedure to insert a student
+CREATE OR REPLACE PROCEDURE insert_student(
     p_studentName VARCHAR(100),
     p_degreeId INT,
     p_departmentId INT,
@@ -255,7 +339,7 @@ CREATE OR REPLACE FUNCTION insert_student(
     p_dateOfGraduation DATE,
     p_graduationStatus VARCHAR(20)
 )
-RETURNS VOID AS $$
+LANGUAGE plpgsql AS $$
 DECLARE
     v_studentId INT;
 BEGIN
@@ -263,14 +347,14 @@ BEGIN
     v_studentId := get_next_student_id();
     
     -- Insert into Students table
-    INSERT INTO Students (studentId, studentName, degreeId, departmentId, 
-                        dateOfJoining, gender, dob, dateOfGraduation, graduationStatus)
-    VALUES (v_studentId, p_studentName, p_degreeId, p_departmentId, 
-            p_dateOfJoining, p_gender, p_dob, p_dateOfGraduation, p_graduationStatus);
+    INSERT INTO Students (studentId, studentName, degreeId, departmentId,
+        dateOfJoining, gender, dob, dateOfGraduation, graduationStatus)
+    VALUES (v_studentId, p_studentName, p_degreeId, p_departmentId,
+        p_dateOfJoining, p_gender, p_dob, p_dateOfGraduation, p_graduationStatus);
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
-3. Trigger function to create login credentials
+-- 3. Trigger function to add student login credentials
 CREATE OR REPLACE FUNCTION create_student_login()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -281,65 +365,168 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 4. Create the trigger
+-- 4. Create trigger to add login after student insertion
 CREATE OR REPLACE TRIGGER student_after_insert
 AFTER INSERT ON Students
 FOR EACH ROW
 EXECUTE FUNCTION create_student_login();
 
--- SELECT insert_student(
---     'Varun Sai'::VARCHAR(100),  -- studentName
---     1::INTEGER,                 -- degreeId (B.Tech)
---     1::INTEGER,                 -- departmentId (Computer Science)
---     '2022-10-22'::DATE,         -- dateOfJoining
---     'Male'::VARCHAR(10),        -- gender
---     '2004-05-16'::DATE,         -- dob
---     NULL::DATE,                 -- dateOfGraduation
---     'In Progress'::VARCHAR(20)  -- graduationStatus
--- );
+-- 5. Procedure to delete a student
+CREATE OR REPLACE PROCEDURE delete_student(p_student_id INT)
+LANGUAGE plpgsql AS $$
+BEGIN
+    -- Delete the student
+    DELETE FROM Students WHERE studentId = p_student_id;
+END;
+$$;
 
-1. Create trigger function to remove login credentials
-CREATE OR REPLACE FUNCTION delete_user_credentials()
+-- 6. Trigger function to delete student login credentials
+CREATE OR REPLACE FUNCTION delete_student_login()
 RETURNS TRIGGER AS $$
 BEGIN
-    DELETE FROM UserLogin WHERE userId = OLD.studentId;
+    -- Delete from UserLogin
+    DELETE FROM UserLogin WHERE userId = OLD.studentId AND role = 'student';
     RETURN OLD;
 END;
 $$ LANGUAGE plpgsql;
 
--- 2. Create trigger to execute before student deletion
-CREATE TRIGGER delete_student_credentials
-BEFORE DELETE ON Students
+-- 7. Create trigger to delete login after student deletion
+CREATE OR REPLACE TRIGGER student_after_delete
+AFTER DELETE ON Students
 FOR EACH ROW
-EXECUTE FUNCTION delete_user_credentials();
+EXECUTE FUNCTION delete_student_login();
 
--- 3. Create delete function for students
-CREATE OR REPLACE FUNCTION delete_student(p_student_id INT)
-RETURNS VOID AS $$
+-- -- 1. Function to generate the next professor ID
+-- CREATE OR REPLACE FUNCTION get_next_professor_id()
+-- RETURNS INT AS $$
+-- DECLARE
+--     next_id INT;
+-- BEGIN
+--     SELECT COALESCE(MAX(professorId), 1000000) + 1 INTO next_id FROM Professors;
+--     RETURN next_id;
+-- END;
+-- $$ LANGUAGE plpgsql;
+
+-- -- 2. Function to insert a new professor
+-- CREATE OR REPLACE FUNCTION insert_professor(
+--     p_professorName VARCHAR(100),
+--     p_departmentId INT,
+--     p_dob DATE,
+--     p_gender VARCHAR(10)
+-- )
+-- RETURNS VOID AS $$
+-- DECLARE
+--     v_professorId INT;
+-- BEGIN
+--     -- Get next available professor ID
+--     v_professorId := get_next_professor_id();
+    
+--     -- Insert into Professors table
+--     INSERT INTO Professors (professorId, professorName, departmentId, dob, gender)
+--     VALUES (v_professorId, p_professorName, p_departmentId, p_dob, p_gender);
+-- END;
+-- $$ LANGUAGE plpgsql;
+
+-- -- 3. Trigger function to create login credentials
+-- CREATE OR REPLACE FUNCTION create_professor_login()
+-- RETURNS TRIGGER AS $$
+-- BEGIN
+--     -- Insert into UserLogin with professor ID as password
+--     INSERT INTO UserLogin (role, userId, password)
+--     VALUES ('professor', NEW.professorId, NEW.professorId::VARCHAR);
+--     RETURN NEW;
+-- END;
+-- $$ LANGUAGE plpgsql;
+
+-- -- 4. Create the trigger on Professors table
+-- CREATE TRIGGER after_professor_insert
+-- AFTER INSERT ON Professors
+-- FOR EACH ROW
+-- EXECUTE FUNCTION create_professor_login();
+-- 1. Function to generate the next professor ID
+
+CREATE OR REPLACE FUNCTION get_next_professor_id()
+RETURNS INT AS $$
+DECLARE
+    next_id INT;
 BEGIN
-    -- First delete grades and enrollments
-    DELETE FROM StudentGrades
-    WHERE enrollmentId IN (
-        SELECT enrollmentId FROM Enrollment WHERE studentId = p_student_id
-    );
-    
-    DELETE FROM Enrollment WHERE studentId = p_student_id;
-    
-    -- Then delete the student (will trigger login deletion)
-    DELETE FROM Students WHERE studentId = p_student_id;
+    SELECT COALESCE(MAX(professorId), 10000) + 1 INTO next_id FROM Professors;
+    RETURN next_id;
 END;
 $$ LANGUAGE plpgsql;
 
--- SELECT insert_student(
---     'Shankar dhadha MBBS'::VARCHAR(100),  -- studentName
---     1::INTEGER,                 -- degreeId (B.Tech)
---     1::INTEGER,                 -- departmentId (Computer Science)
---     '2022-10-22'::DATE,         -- dateOfJoining
---     'Male'::VARCHAR(10),        -- gender
---     '1984-05-16'::DATE,         -- dob
---     NULL::DATE,                 -- dateOfGraduation
---     'In Progress'::VARCHAR(20)  -- graduationStatus
--- );
+-- 2. Procedure to insert a new professor
+CREATE OR REPLACE PROCEDURE insert_professor(
+    p_professorName VARCHAR(100),
+    p_departmentId INT,
+    p_dob DATE,
+    p_gender VARCHAR(10)
+)
+LANGUAGE plpgsql AS $$
+DECLARE
+    v_professorId INT;
+BEGIN
+    -- Get next available professor ID
+    v_professorId := get_next_professor_id();
+    
+    -- Insert into Professors table
+    INSERT INTO Professors (professorId, professorName, departmentId, dob, gender)
+    VALUES (v_professorId, p_professorName, p_departmentId, p_dob, p_gender);
+END;
+$$;
 
--- SELECT * FROM userLogin;
--- SELECT delete_student(2000011);
+-- 3. Trigger function to create login credentials
+CREATE OR REPLACE FUNCTION create_professor_login()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Insert into UserLogin with professor ID as password
+    INSERT INTO UserLogin (role, userId, password)
+    VALUES ('professor', NEW.professorId, NEW.professorId::VARCHAR);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 4. Create the trigger on Professors table
+CREATE OR REPLACE TRIGGER after_professor_insert
+AFTER INSERT ON Professors
+FOR EACH ROW
+EXECUTE FUNCTION create_professor_login();
+
+-- 5. Procedure to delete a professor
+CREATE OR REPLACE PROCEDURE delete_professor(p_professor_id INT)
+LANGUAGE plpgsql AS $$
+DECLARE
+    is_head BOOLEAN;
+BEGIN
+    -- Check if professor is a department head
+    SELECT EXISTS(
+        SELECT 1 
+        FROM Department 
+        WHERE headOfDeptId = p_professor_id
+    ) INTO is_head;
+    
+    -- If professor is a department head, raise an exception
+    IF is_head THEN
+        RAISE EXCEPTION 'Cannot delete professor. They are currently assigned as a department head.';
+    END IF;
+    
+    -- Delete the professor if not a department head
+    DELETE FROM Professors WHERE professorId = p_professor_id;
+END;
+$$;
+
+-- 6. Trigger function to delete professor login credentials
+CREATE OR REPLACE FUNCTION delete_professor_login()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Delete from UserLogin
+    DELETE FROM UserLogin WHERE userId = OLD.professorId AND role = 'professor';
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 7. Create trigger to delete login after professor deletion
+CREATE OR REPLACE TRIGGER professor_after_delete
+AFTER DELETE ON Professors
+FOR EACH ROW
+EXECUTE FUNCTION delete_professor_login();

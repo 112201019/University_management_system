@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard</title>
+  <link rel="stylesheet" href="../../static/css/admin/style.css" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/professor/style.css') }}">
+
+</head>
+
+<body>
+  <header>
+    <h1>Professors</h1>
+    <div class="user-dropdown">
+      <button class="dropdown-btn">
+        <div class="profile-avatar">👤</div>
+        <span class="dropdown-arrow">▼</span>
+      </button>
+      <div class="dropdown-content">
+        <a href="{{ url_for('logout') }}" class="logout-option">
+          <div class="icon">🚪</div>
+          <span>Logout</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="welcome-message">
+      <h2>Add/Delete Professors</h2>
+    </div>
+
+    <div class="dashboard">
+      <div class="dashboard-item">
+        <a href="{{ url_for('add_prof') }}">
+          <div class="icon">👥</div>
+          <div class="title">ADD Professor</div>
+          <p style="color: gray">Add a Professor to the university</p>
+        </a>
+      </div>
+      <div class="dashboard-item">
+        <a href="{{ url_for('del_prof') }}">
+          <div class="icon">👥</div>
+          <div class="title">DELETE Professor</div>
+          <p style="color: gray">Delete a Professor from the university</p>
+        </a>
+      </div>
+      
+    </div>
+  </div>
+
+  <script>
+    // Toggle dropdown menu
+    document.querySelector('.dropdown-btn').addEventListener('click', function () {
+      document.querySelector('.dropdown-content').classList.toggle('show');
+    });
+
+    // Close the dropdown if clicked outside
+    window.addEventListener('click', function (event) {
+      if (!event.target.matches('.dropdown-btn') &&
+          !event.target.matches('.dropdown-arrow') &&
+          !event.target.matches('.profile-avatar')) {
+        const dropdown = document.querySelector('.dropdown-content');
+        if (dropdown.classList.contains('show')) {
+          dropdown.classList.remove('show');
+        }
+      }
+    });
+  </script>
+</body>
+
+</html>

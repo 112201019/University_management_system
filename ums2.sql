@@ -26,7 +26,8 @@ CREATE TABLE Professors (
   departmentId int NOT NULL, 
   professorName varchar(100) NOT NULL,
   dob date NOT NULL,
-  gender varchar(10) CHECK (gender IN ('Male', 'Female', 'Other'))
+  gender varchar(10) CHECK (gender IN ('Male', 'Female', 'Other')),
+  WorkingStatus varchar(10) CHECK (WorkingStatus IN ('Active', 'Departed'))
 );
 
 -- Students: Standardize column names (deptId → departmentId)
@@ -47,7 +48,6 @@ CREATE TABLE Courses (
   courseName varchar(100) NOT NULL,
   departmentId int NOT NULL, -- Renamed from deptId
   typeOfCourse varchar(2) NOT NULL CHECK (typeOfCourse IN ('UG', 'PG')),
-  professorId int NOT NULL,
   courseType varchar(20) CHECK (courseType IN ('Theory', 'Lab')), -- Renamed from 'type'
   credits int NOT NULL CHECK (credits > 0 AND credits <= 5)
 );
@@ -73,7 +73,7 @@ CREATE TABLE Enrollment (
   studentId int NOT NULL,
   offeringId int NOT NULL,
   enrollmentDate date NOT NULL,
-  status varchar(20) CHECK (status IN ('Approved', 'Rejected', 'Pending')),
+  status varchar(20) CHECK (status IN ('Approved', 'Rejected', 'Pending', 'Dropped')),
   UNIQUE (studentId, offeringId) -- Prevent duplicate enrollments
 );
 
@@ -112,11 +112,11 @@ VALUES
   (3, 'Electrical Engineering', NULL);
 
 -- 3. Insert Professors (one per department)
-INSERT INTO Professors (professorId, departmentId, professorName, dob, gender)
+INSERT INTO Professors (professorId, departmentId, professorName, dob, gender, WorkingStatus)
 VALUES 
-  (10001, 1, 'Dr. Alice', '1975-06-15', 'Female'),
-  (10002, 2, 'Dr. Bob', '1980-09-20', 'Male'),
-  (10003, 3, 'Dr. Carol', '1978-04-10', 'Female');
+  (10001, 1, 'Dr. Alice', '1975-06-15', 'Female', 'Active'),
+  (10002, 2, 'Dr. Bob', '1980-09-20', 'Male', 'Active'),
+  (10003, 3, 'Dr. Carol', '1978-04-10', 'Female', 'Active');
 
 -- 4. Update Departments to assign headOfDeptId from the corresponding professor
 UPDATE Department SET headOfDeptId = 10001 WHERE departmentId = 1;
@@ -140,55 +140,55 @@ VALUES
 
 -- 6. Insert Courses
 -- Department 1 Courses
-INSERT INTO Courses (courseId, courseName, departmentId, typeOfCourse, professorId, courseType, credits)
+INSERT INTO Courses (courseId, courseName, departmentId, typeOfCourse, courseType, credits)
 VALUES
-  (3000001, 'Introduction to Programming', 1, 'UG', 10001, 'Theory', 4),
-  (3000002, 'Data Structures', 1, 'UG', 10001, 'Theory', 4),
-  (3000003, 'Programming Lab', 1, 'UG', 10001, 'Lab', 2);
+  (3000001, 'Introduction to Programming', 1, 'UG', 'Theory', 4),
+  (3000002, 'Data Structures', 1, 'UG', 'Theory', 4),
+  (3000003, 'Programming Lab', 1, 'UG', 'Lab', 2);
 
 -- Department 2 Courses
-INSERT INTO Courses (courseId, courseName, departmentId, typeOfCourse, professorId, courseType, credits)
+INSERT INTO Courses (courseId, courseName, departmentId, typeOfCourse, courseType, credits)
 VALUES
-  (3000004, 'Statistics for Data Science', 2, 'UG', 10002, 'Theory', 3),
-  (3000005, 'Machine Learning Basics', 2, 'UG', 10002, 'Theory', 4),
-  (3000006, 'Data Science Lab', 2, 'UG', 10002, 'Lab', 2);
+  (3000004, 'Statistics for Data Science', 2, 'UG',  'Theory', 3),
+  (3000005, 'Machine Learning Basics', 2, 'UG',  'Theory', 4),
+  (3000006, 'Data Science Lab', 2, 'UG', 'Lab', 2);
 
 -- Department 3 Courses
 INSERT INTO Courses (courseId, courseName, departmentId, typeOfCourse, professorId, courseType, credits)
 VALUES
-  (3000007, 'Circuits and Electronics', 3, 'UG', 10003, 'Theory', 4),
-  (3000008, 'Electrical Machines', 3, 'UG', 10003, 'Theory', 4),
-  (3000009, 'Electronics Lab', 3, 'UG', 10003, 'Lab', 2);
+  (3000007, 'Circuits and Electronics', 3, 'UG',  'Theory', 4),
+  (3000008, 'Electrical Machines', 3, 'UG',  'Theory', 4),
+  (3000009, 'Electronics Lab', 3, 'UG', 'Lab', 2);
 
 -- 7. Insert Academic Terms
 -- Ongoing term (Spring 2025: current date 2025-04-11 falls between start and end dates)
 INSERT INTO AcademicTerm (termId, termName, startDate, endDate)
 VALUES 
-  (1, 'Spring 2025', '2025-01-10', '2025-05-20');
+  (2, 'Spring 2025', '2025-01-10', '2025-05-20');
 
 -- An additional past term to support a completed enrollment and grade (Fall 2024)
 INSERT INTO AcademicTerm (termId, termName, startDate, endDate)
 VALUES 
-  (2, 'Fall 2024', '2024-09-01', '2024-12-15');
+  (1, 'Fall 2024', '2024-09-01', '2024-12-15');
 
 -- 8. Insert Course Offerings
--- Ongoing semester offerings (termId = 1)
+-- Ongoing semester offerings (termId = 2)
 INSERT INTO CourseOffering (offeringId, courseId, termId, professorId, maxCapacity)
 VALUES
   -- For Department 1
-  (4000001, 3000001, 1, 10001, 30),
-  (4000002, 3000002, 1, 10001, 30),
+  (4000001, 3000001, 2, 10001, 30),
+  (4000002, 3000002, 2, 10001, 30),
   -- For Department 2
-  (4000003, 3000004, 1, 10002, 25),
-  (4000004, 3000005, 1, 10002, 25),
+  (4000003, 3000004, 2, 10002, 25),
+  (4000004, 3000005, 2, 10002, 25),
   -- For Department 3
-  (4000005, 3000007, 1, 10003, 20),
-  (4000006, 3000008, 1, 10003, 20);
+  (4000005, 3000007, 2, 10003, 20),
+  (4000006, 3000008, 2, 10003, 20);
 
--- Past term offering (termId = 2) to demonstrate StudentGrades entry.
+-- Past term offering (termId = 1) to demonstrate StudentGrades entry.
 INSERT INTO CourseOffering (offeringId, courseId, termId, professorId, maxCapacity)
 VALUES
-  (4000007, 3000003, 2, 10001, 30);
+  (4000007, 3000003, 1, 10001, 30);
 
 -- 9. Insert Enrollments
 -- Enroll each student in at least one current course offering:
@@ -223,8 +223,6 @@ VALUES
   ('student', 2000004, '2000004'),
   ('student', 2000005, '2000005'),
   ('student', 2000006, '2000006'),
-  ('student', 2000007, '2000007'),
-  ('student', 2000008, '2000008'),
   ('professor', 10001, '10001'),
   ('professor', 10002, '10002'),
   ('professor', 10003, '10003'),

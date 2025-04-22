@@ -123,154 +123,10 @@ def admin_dashboard():
         return redirect(url_for('login'))
     return render_template('/admin/admin.html', username=session.get('username'))
 
-@app.route('/student_dashboard')
-def student_dashboard():
-    if session.get('role') != 'student':
-        return redirect(url_for('login'))
-    return render_template('/student/student.html', username=session.get('username'))
-
-@app.route('/professor_dashboard')
-def professor_dashboard():
-    if session.get('role') != 'professor':
-        return redirect(url_for('login'))
-    return render_template('professor.html', username=session.get('username'))
-
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('home'))
-
-@app.route('/student/grades')
-def view_grades():
-    if session.get('role') != 'student':
-        return redirect(url_for("login"))
-    return render_template("./student/grades.html", username=session.get("username"))
-
-@app.route('/student/course_registation')
-def course_registration():
-    if session.get('role') != 'student':
-        return redirect(url_for("login"))
-    return render_template("./student/course_registration.html", username=session.get("username"))
-
-@app.route('/student/courses')
-def view_courses():
-    if session.get('role') != 'student':
-        return redirect(url_for("login"))
-
-    user_id = session.get('user_id')
-    if not user_id:
-        flash('Session expired. Please login again.')
-        return redirect(url_for('login'))
-
-    student_dept_query = """
-        SELECT departmentId
-        FROM Students
-        WHERE studentId = :student_id
-    """
-    student_dept_result = db.execute_dql_commands(student_dept_query, {'student_id': user_id})
-    student_dept_row = student_dept_result.fetchone()
-    student_dept = student_dept_row[0] if student_dept_row else None
-
-    if student_dept is None:
-        flash('Student department information not found.')
-        return redirect(url_for('student_dashboard'))
-
-    query = """
-        SELECT 
-            c.courseId AS "courseId", 
-            c.courseName AS "courseName", 
-            c.credits AS "credits", 
-            d.deptName AS "deptName", 
-            at.termName AS "termName", 
-            p.professorName AS "professorName",
-            CASE 
-                WHEN c.departmentId = :student_dept THEN 'Core Course' 
-                ELSE 'Elective Course' 
-            END AS "courseType"
-        FROM Enrollment e
-        JOIN CourseOffering co ON e.offeringId = co.offeringId
-        JOIN Courses c ON co.courseId = c.courseId
-        JOIN Department d ON c.departmentId = d.departmentId
-        JOIN AcademicTerm at ON co.termId = at.termId
-        JOIN Professors p ON co.professorId = p.professorId
-        WHERE e.studentId = :student_id AND e.status = 'Approved'
-    """
-    result = db.execute_dql_commands(query, {'student_id': user_id, 'student_dept': student_dept})
-    courses = result.mappings().all()
-    
-    return render_template("./student/courses.html",
-                           username=session.get('username'),
-                           courses=courses)
-
-
-@app.route("/student/profile")
-def view_profile():
-    if session.get('role') != 'student':
-        return redirect(url_for('login'))
-    
-    user_id = session.get('user_id')
-    if not user_id:
-        flash('Session expired. Please login again.')
-        return redirect(url_for('login'))
-    
-    student_query = """
-        SELECT 
-            studentId AS "studentId",
-            studentName AS "studentName",
-            degreeId AS "degreeId",
-            departmentId AS "departmentId",
-            dateOfJoining AS "dateOfJoining",
-            gender,
-            dob,
-            graduated
-        FROM Students
-        WHERE studentId = :student_id
-    """
-    
-    student_result = db.execute_dql_commands(student_query, {'student_id': user_id})
-    student = student_result.mappings().first()
-    
-    if not student:
-        flash('Student information not found')
-        return redirect(url_for('student_dashboard'))
-    
-    dept_query = """
-        SELECT deptName AS "deptName"
-        FROM Department
-        WHERE departmentId = :dept_id
-    """
-    dept_result = db.execute_dql_commands(dept_query, {'dept_id': student['departmentId']})
-    dept_row = dept_result.mappings().first()
-    department_name = dept_row['deptName'] if dept_row else "Not assigned"
-    
-    degree_query = """
-        SELECT degreeName AS "degreeName"
-        FROM Degree
-        WHERE degreeId = :degree_id
-    """
-    degree_result = db.execute_dql_commands(degree_query, {'degree_id': student['degreeId']})
-    degree_row = degree_result.mappings().first()
-    degree_name = degree_row['degreeName'] if degree_row else "Not assigned"
-    
-    return render_template(
-        './student/profile.html', 
-        username=session.get('username'),
-        student=student,
-        department_name=department_name,
-        degree_name=degree_name
-    )
-
-@app.route('/student/course_registation/add_courses')
-def add_courses():
-    if session.get('role') != 'student':
-        return redirect(url_for("login"))
-    return render_template("./student/drop_courses.html", username=session.get("username"))
-
-@app.route('/student/course_registation/drop_courses')
-def drop_courses():
-    if session.get('role') != 'student':
-        return redirect(url_for("login"))
-    return render_template("./student/add_courses.html", username=session.get("username"))
 
 @app.route('/course_registration1', methods=['GET', 'POST'])
 def course_registration1():
@@ -300,7 +156,7 @@ def view_all_students():
     degree_filter = request.args.get('degree', 'all')
     department_filter = request.args.get('department', 'all')
     
-    print(f"DEBUG: Received filters - degree: {degree_filter}, department: {department_filter}")
+    # print(f"DEBUG: Received filters - degree: {degree_filter}, department: {department_filter}")
     
     # Get all degrees for the dropdown menu
     degrees_query = """
@@ -376,7 +232,7 @@ def view_all_students():
     # Add ordering
     students_query += " ORDER BY s.studentName"
     
-    print(f"DEBUG: Executing query: {students_query}")
+    # print(f"DEBUG: Executing query: {students_query}")
     
     # Execute the query
     students_result = db.execute_dql_commands(students_query)
@@ -401,7 +257,7 @@ def view_all_students():
         except Exception as e:
             print(f"Error processing student row: {e}")
     
-    print(f"DEBUG: Found {len(students_list)} students")
+    # print(f"DEBUG: Found {len(students_list)} students")
     
     # Render the template with all necessary data
     return render_template(
@@ -594,55 +450,82 @@ def update_student(student_id):
 
 @app.route('/AorDstudent/add_student', methods=['GET', 'POST'])
 def add_student():
+    # You might want to fetch departments and degrees here for dropdowns as well
+    departments = []
+    degrees = []
+    try:
+        departments_result = db.execute_dql_commands("SELECT departmentId, deptName FROM Department").fetchall()
+        departments = [{"departmentId": row[0], "deptName": row[1]} for row in departments_result]
+        degrees_result = db.execute_dql_commands("SELECT degreeId, degreeName FROM Degree").fetchall()
+        degrees = [{"degreeId": row[0], "degreeName": row[1]} for row in degrees_result]
+    except Exception as e:
+         flash(f'Error fetching departments or degrees: {str(e)}', 'error')
+
     if request.method == 'POST':
         try:
             # Get form data
             student_data = {
                 'p_studentName': request.form['name'],
-                'p_degreeId': request.form['degree_id'],
-                'p_departmentId': request.form['department_id'],
+                'p_degreeId': int(request.form['degree_id']),
+                'p_departmentId': int(request.form['department_id']),
                 'p_dateOfJoining': request.form['join_date'],
                 'p_gender': request.form['gender'],
                 'p_dob': request.form['dob'],
-                'p_graduationStatus': request.form['status']
+                # Default values as per the procedure definition in the original code
+                'p_dateOfGraduation': None,
+                'p_graduationStatus': 'In Progress'
             }
 
-            # Call the stored procedure
+            # Call the stored procedure using CALL
             db.execute_ddl_and_dml_commands(
-                "SELECT insert_student(:p_studentName, :p_degreeId, :p_departmentId, "
-                ":p_dateOfJoining, :p_gender, :p_dob, NULL, :p_graduationStatus)",
+                """CALL insert_student(
+                       :p_studentName, :p_degreeId, :p_departmentId,
+                       :p_dateOfJoining, :p_gender, :p_dob,
+                       :p_dateOfGraduation, :p_graduationStatus
+                   )""",
                 student_data
             )
-            
+
             flash('Student added successfully!', 'success')
-            return redirect(url_for('add_student'))
-        
+            return redirect(url_for('add_student')) # Redirect to clear form
+
         except Exception as e:
             flash(f'Error adding student: {str(e)}', 'error')
-    
-    return render_template('./admin/student/Add_students.html')
+            # Optionally, log the error: app.logger.error(f"Error adding student: {e}")
 
-# app.py - Add this route
+    # Pass dropdown data to the template
+    return render_template('./admin/student/Add_students.html', departments=departments, degrees=degrees)
+
+
 @app.route('/AorDstudent/delete_student', methods=['GET', 'POST'])
 def del_student():
     if request.method == 'POST':
         try:
-            student_id = request.form['student_id']
+            p_student_id = request.form['student_id']
+
+            if not p_student_id:
+                 flash('Student ID is required.', 'warning')
+                 return render_template('./admin/student/Del_students.html')
+
+            # Call the stored procedure using CALL
             db.execute_ddl_and_dml_commands(
-                "SELECT delete_student(:p_student_id)",
-                {'p_student_id': student_id}
+                "CALL delete_student(:p_student_id)",
+                {'p_student_id': int(p_student_id)} # Ensure ID is an integer
             )
-            flash('Student deleted successfully!', 'success')
+            flash(f'Student with ID {p_student_id} deleted successfully!', 'success')
+            return redirect(url_for('del_student')) # Redirect to the same page
+
         except Exception as e:
             flash(f'Error deleting student: {str(e)}', 'error')
-        return redirect(url_for('del_student'))
+            # Optionally, log the error: app.logger.error(f"Error deleting student: {e}")
+
+    # For GET request, just render the form
     return render_template('./admin/student/Del_students.html')
+
 
 @app.route('/AorDstudent', methods=['GET'])
 def AorD():
     return render_template('./admin/student/AorD.html')
-
-
 
 @app.route('/admin_professor', methods=['GET','POST'])
 def admin_professor():
@@ -826,6 +709,76 @@ def update_professor(professor_id):
     flash("Professor information updated successfully!", "success")
     return redirect(url_for('view_professor', professor_id=professor_id))
 
+@app.route('/admin_professor/add_professor', methods=['GET', 'POST'])
+def add_prof():
+    departments = []
+    try:
+        # Get all departments for the dropdown
+        # Assuming execute_dql_commands returns a list of tuples or similar iterable
+        departments_result = db.execute_dql_commands("SELECT departmentId, deptName FROM Department").fetchall()
+        # Convert to list of dictionaries for easier template handling (optional but good practice)
+        departments = [{"departmentId": row[0], "deptName": row[1]} for row in departments_result]
+    except Exception as e:
+        flash(f'Error fetching departments: {str(e)}', 'error')
+
+    if request.method == 'POST':
+        try:
+            # Get form data
+            p_professorName = request.form['professor_name']
+            p_departmentId = request.form['department_id']
+            p_dob = request.form['dob']
+            p_gender = request.form['gender']
+
+            # Call the stored procedure to insert the professor
+            # The procedure internally calls get_next_professor_id()
+            db.execute_ddl_and_dml_commands(
+                "CALL insert_professor(:p_professorName, :p_departmentId, :p_dob, :p_gender)",
+                {
+                    'p_professorName': p_professorName,
+                    'p_departmentId': int(p_departmentId), # Ensure ID is an integer
+                    'p_dob': p_dob,
+                    'p_gender': p_gender
+                }
+            )
+
+            flash('Professor added successfully!', 'success')
+            return redirect(url_for('add_prof')) # Redirect to clear form
+
+        except Exception as e:
+            # Catch potential errors (e.g., invalid departmentId, database errors)
+            flash(f'Error adding professor: {str(e)}', 'error')
+            # Optionally, log the error: app.logger.error(f"Error adding professor: {e}")
+
+    # Pass departments to the template for the dropdown
+    return render_template('./admin/professor/add_professor.html', departments=departments)
+
+
+@app.route('/admin_professor/del_professor', methods=['GET', 'POST'])
+def del_prof():
+    if request.method == 'POST':
+        try:
+            p_professor_id = request.form['professor_id']
+
+            if not p_professor_id:
+                 flash('Professor ID is required.', 'warning')
+                 return render_template('./admin/professor/delete_professor.html')
+
+            # Call the stored procedure to delete the professor
+            db.execute_ddl_and_dml_commands(
+                "CALL delete_professor(:p_professor_id)",
+                {'p_professor_id': int(p_professor_id)} # Ensure ID is an integer
+            )
+
+            flash(f'Professor with ID {p_professor_id} deleted successfully!', 'success')
+            return redirect(url_for('del_prof')) # Redirect to the same page (or a professor list page)
+
+        except Exception as e:
+            # Catch potential errors, including the EXCEPTION raised by the procedure
+            flash(f'Error deleting professor: {str(e)}', 'error')
+            # Optionally, log the error: app.logger.error(f"Error deleting professor: {e}")
+
+    # For GET request, just render the form
+    return render_template('./admin/professor/delete_professor.html')
+
 if __name__ == '__main__':
     app.run(debug=True)
-add_or_delete_professors
