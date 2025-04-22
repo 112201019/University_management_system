@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Department</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>Add New Department</h1>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                 <div class="mt-3">
+                 {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                 {% endfor %}
+                 </div>
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('add_department') }}" class="mt-4">
+            <div class="mb-3">
+                <label for="dept_name" class="form-label">Department Name</label>
+                <input type="text" class="form-control" id="dept_name" name="dept_name" required placeholder="Enter new department name">
+            </div>
+
+            <button type="submit" class="btn btn-primary">Add Department</button>
+        </form>
+
+        <!-- Optional: Link back to a dashboard or list -->
+        <div class="mt-4">
+            <a href="{{ url_for('admin_dashboard') or '#' }}" class="btn btn-secondary">Back to Dashboard</a>
+            <!-- Replace 'admin_dashboard' with your actual dashboard route name -->
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

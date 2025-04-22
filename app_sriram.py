@@ -552,6 +552,7 @@ def view_all_professors():
                p.professorName,
                p.dob,
                p.gender,
+               p.WorkingStatus,
                dept.deptName
         FROM Professors p
         JOIN Department dept ON p.departmentId = dept.departmentId
@@ -574,8 +575,9 @@ def view_all_professors():
             'professorId': r[0],
             'professorName': r[1],
             'dob': r[2].strftime('%d-%m-%Y'),
-            'gender': r[3],
-            'deptName': r[4]
+            'gender': r[4],
+            'deptName': r[5],
+            'WorkingStatus':r[3]
         })
 
     return render_template(
@@ -728,7 +730,7 @@ def add_prof():
             p_departmentId = request.form['department_id']
             p_dob = request.form['dob']
             p_gender = request.form['gender']
-
+            # p_Workingstatus = 'Active'
             # Call the stored procedure to insert the professor
             # The procedure internally calls get_next_professor_id()
             db.execute_ddl_and_dml_commands(
@@ -779,6 +781,158 @@ def del_prof():
 
     # For GET request, just render the form
     return render_template('./admin/professor/delete_professor.html')
+
+
+@app.route('/admin_department/add_department', methods=['GET', 'POST'])
+def add_department():
+    if request.method == 'POST':
+        try:
+            dept_name = request.form['dept_name']
+
+            if not dept_name:
+                flash('Department Name cannot be empty.', 'warning')
+                return render_template('admin/department/add_department.html') # Re-render form
+
+            db.execute_ddl_and_dml_commands(
+                "CALL insert_department(:p_deptName)",
+                {'p_deptName': dept_name}
+            )
+
+            flash(f'Department "{dept_name}" added successfully!', 'success')
+            return redirect(url_for('add_department')) # Redirect to clear form
+
+        except Exception as e:
+            flash(f'Error adding department: {str(e)}', 'error')
+
+    return render_template('admin/department/department.html')
+
+@app.route('/admin_department/add_degree', methods=['GET', 'POST'])
+def add_degree():
+    if request.method == 'POST':
+        try:
+            # Get form data
+            degree_data = {
+                'p_degreeName': request.form['degree_name'],
+                'p_ugPgType': request.form['ug_pg_type'],
+                # Convert numeric fields to integers, handle potential ValueError
+                'p_maxYears': int(request.form['max_years']),
+                'p_totalCreditsRequired': int(request.form['total_credits']),
+                'p_coreCreditsRequired': int(request.form['core_credits'])
+            }
+
+            # Basic validation (can add more specific checks)
+            if not all(degree_data.values()):
+                 flash('All fields are required.', 'warning')
+                 return render_template('admin/degree/add_degree.html') # Re-render form
+
+            if degree_data['p_ugPgType'] not in ('UG', 'PG'):
+                flash('Invalid Degree Type selected.', 'warning')
+                return render_template('admin/degree/add_degree.html')
+
+            if degree_data['p_maxYears'] <= 0 or \
+               degree_data['p_totalCreditsRequired'] <= 0 or \
+               degree_data['p_coreCreditsRequired'] < 0: # Core can be 0, but not negative
+                 flash('Years and Credits must be positive numbers.', 'warning')
+                 return render_template('admin/degree/add_degree.html')
+
+            # Note: The check for core <= total is also in the procedure,
+            # but catching it here can provide quicker feedback.
+            if degree_data['p_coreCreditsRequired'] > degree_data['p_totalCreditsRequired']:
+                flash('Core Credits cannot exceed Total Credits.', 'warning')
+                return render_template('admin/degree/add_degree.html')
+
+
+            # Call the stored procedure to insert the degree
+            db.execute_ddl_and_dml_commands(
+                """CALL insert_degree(
+                        :p_degreeName, :p_ugPgType, :p_maxYears,
+                        :p_totalCreditsRequired, :p_coreCreditsRequired
+                   )""",
+                degree_data
+            )
+
+            flash(f'Degree "{degree_data["p_degreeName"]}" added successfully!', 'success')
+            return redirect(url_for('add_degree')) # Redirect to clear form
+
+        except ValueError:
+            flash('Invalid input: Years and Credits must be valid numbers.', 'error')
+        except Exception as e:
+            # Catch potential errors (database connection, procedure errors like the core > total check)
+            flash(f'Error adding degree: {str(e)}', 'error')
+            # Optionally, log the error: app.logger.error(f"Error adding degree: {e}")
+
+    # For GET request, just render the form
+    return render_template('admin/degree/degree.html')
+
+@app.route('/courses_by_term', methods=['GET'])
+def view_courses_by_term():
+    terms = []
+    offerings = []
+    selected_term_id = None
+    selected_term_name = "None" # Default display name
+
+    try:
+        # 1. Fetch all available academic terms (ordered by most recent first)
+        terms_result = db.execute_dql_commands(
+            "SELECT termId, termName, startDate FROM AcademicTerm ORDER BY startDate DESC"
+        ).fetchall()
+        # Convert to list of dictionaries for easier template access
+        terms = [{"termId": row[0], "termName": row[1], "startDate": row[2]} for row in terms_result]
+
+        # 2. Determine which term to display offerings for
+        requested_term_id = request.args.get('term_id', type=int) # Get term_id from URL query parameter
+
+        if requested_term_id:
+            # If a specific term was requested via URL parameter
+            selected_term_id = requested_term_id
+        elif terms:
+            # If no specific term requested, default to the latest term
+            selected_term_id = terms[0]['termId'] # The first one due to ORDER BY
+
+        # 3. Fetch course offerings IF a term is selected using the SQL function
+        if selected_term_id:
+            # Find the name of the selected term for display
+            for term in terms:
+                if term['termId'] == selected_term_id:
+                    selected_term_name = term['termName']
+                    break
+
+            # Call the SQL function
+            # Note: The exact syntax might depend slightly on your DB wrapper
+            # We select the columns defined in the function's RETURNS TABLE
+            offerings_result = db.execute_dql_commands(
+                """SELECT offering_id, course_id, course_name, course_type,
+                          ug_pg_type, credits, dept_name, professor_id,
+                          professor_name, max_capacity
+                   FROM get_course_offerings_by_term(:selected_term_id);
+                """,
+                {'selected_term_id': selected_term_id}
+            ).fetchall()
+
+            # Convert results to list of dictionaries - column names match function output
+            offerings = [
+                {
+                    "offeringId": row[0], "courseId": row[1], "courseName": row[2],
+                    "courseType": row[3], "ugPgType": row[4], "credits": row[5],
+                    "deptName": row[6], "professorId": row[7], "professorName": row[8],
+                    "maxCapacity": row[9]
+                } for row in offerings_result
+            ]
+
+    except Exception as e:
+        flash(f'Error fetching course data: {str(e)}', 'error')
+        # Optionally log the error: app.logger.error(f"Error fetching courses: {e}")
+        terms = [] # Prevent potential issues in template if terms fetch failed partially
+        offerings = []
+
+
+    return render_template(
+        'admin/courses/courses.html', # Adjust path as needed
+        terms=terms,
+        offerings=offerings,
+        selected_term_id=selected_term_id,
+        selected_term_name=selected_term_name
+    )
 
 if __name__ == '__main__':
     app.run(debug=True)

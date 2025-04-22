@@ -89,7 +89,6 @@ ALTER TABLE Professors ADD FOREIGN KEY (departmentId) REFERENCES Department(depa
 ALTER TABLE Students ADD FOREIGN KEY (degreeId) REFERENCES Degree(degreeId);
 ALTER TABLE Students ADD FOREIGN KEY (departmentId) REFERENCES Department(departmentId);
 ALTER TABLE Courses ADD FOREIGN KEY (departmentId) REFERENCES Department(departmentId);
-ALTER TABLE Courses ADD FOREIGN KEY (professorId) REFERENCES Professors(professorId);
 ALTER TABLE CourseOffering ADD FOREIGN KEY (courseId) REFERENCES Courses(courseId);
 ALTER TABLE CourseOffering ADD FOREIGN KEY (termId) REFERENCES AcademicTerm(termId);
 ALTER TABLE CourseOffering ADD FOREIGN KEY (professorId) REFERENCES Professors(professorId);
@@ -232,92 +231,7 @@ CREATE ROLE student;
 CREATE ROLE professor;
 CREATE ROLE admin;
 
--- -- 1. Function to generate the next student ID
--- CREATE OR REPLACE FUNCTION get_next_student_id()
--- RETURNS INT AS $$
--- DECLARE
---     next_id INT;
--- BEGIN
---     SELECT COALESCE(MAX(studentId), 2000000) + 1 INTO next_id FROM Students;
---     RETURN next_id;
--- END;
--- $$ LANGUAGE plpgsql;
 
--- -- 2. Function to insert a new student
--- CREATE OR REPLACE FUNCTION insert_student(
---     p_studentName VARCHAR(100),
---     p_degreeId INT,
---     p_departmentId INT,
---     p_dateOfJoining DATE,
---     p_gender VARCHAR(10),
---     p_dob DATE,
---     p_dateOfGraduation DATE,
---     p_graduationStatus VARCHAR(20)
--- )
--- RETURNS VOID AS $$
--- DECLARE
---     v_studentId INT;
--- BEGIN
---     -- Get next available student ID
---     v_studentId := get_next_student_id();
-    
---     -- Insert into Students table
---     INSERT INTO Students (studentId, studentName, degreeId, departmentId, 
---                         dateOfJoining, gender, dob, dateOfGraduation, graduationStatus)
---     VALUES (v_studentId, p_studentName, p_degreeId, p_departmentId, 
---             p_dateOfJoining, p_gender, p_dob, p_dateOfGraduation, p_graduationStatus);
--- END;
--- $$ LANGUAGE plpgsql;
-
--- -- 3. Trigger function to create login credentials
--- CREATE OR REPLACE FUNCTION create_student_login()
--- RETURNS TRIGGER AS $$
--- BEGIN
---     -- Insert into UserLogin with student ID as password
---     INSERT INTO UserLogin (role, userId, password)
---     VALUES ('student', NEW.studentId, NEW.studentId::VARCHAR);
---     RETURN NEW;
--- END;
--- $$ LANGUAGE plpgsql;
-
--- -- 4. Create the trigger
--- CREATE OR REPLACE TRIGGER student_after_insert
--- AFTER INSERT ON Students
--- FOR EACH ROW
--- EXECUTE FUNCTION create_student_login();
-
--- CREATE OR REPLACE FUNCTION delete_user_credentials()
--- RETURNS TRIGGER AS $$
--- BEGIN
---     DELETE FROM UserLogin WHERE userId = OLD.studentId;
---     RETURN OLD;
--- END;
--- $$ LANGUAGE plpgsql;
-
--- -- 2. Create trigger to execute before student deletion
--- CREATE TRIGGER delete_student_credentials
--- BEFORE DELETE ON Students
--- FOR EACH ROW
--- EXECUTE FUNCTION delete_user_credentials();
-
--- -- 3. Create delete function for students
--- CREATE OR REPLACE FUNCTION delete_student(p_student_id INT)
--- RETURNS VOID AS $$
--- BEGIN
---     -- First delete grades and enrollments
---     DELETE FROM StudentGrades
---     WHERE enrollmentId IN (
---         SELECT enrollmentId FROM Enrollment WHERE studentId = p_student_id
---     );
-    
---     DELETE FROM Enrollment WHERE studentId = p_student_id;
-    
---     -- Then delete the student (will trigger login deletion)
---     DELETE FROM Students WHERE studentId = p_student_id;
--- END;
--- $$ LANGUAGE plpgsql;
-
--- 1. Function to get next student ID
 CREATE OR REPLACE FUNCTION get_next_student_id()
 RETURNS INT AS $$
 DECLARE
@@ -380,70 +294,6 @@ BEGIN
 END;
 $$;
 
--- 6. Trigger function to delete student login credentials
-CREATE OR REPLACE FUNCTION delete_student_login()
-RETURNS TRIGGER AS $$
-BEGIN
-    -- Delete from UserLogin
-    DELETE FROM UserLogin WHERE userId = OLD.studentId AND role = 'student';
-    RETURN OLD;
-END;
-$$ LANGUAGE plpgsql;
-
--- 7. Create trigger to delete login after student deletion
-CREATE OR REPLACE TRIGGER student_after_delete
-AFTER DELETE ON Students
-FOR EACH ROW
-EXECUTE FUNCTION delete_student_login();
-
--- -- 1. Function to generate the next professor ID
--- CREATE OR REPLACE FUNCTION get_next_professor_id()
--- RETURNS INT AS $$
--- DECLARE
---     next_id INT;
--- BEGIN
---     SELECT COALESCE(MAX(professorId), 1000000) + 1 INTO next_id FROM Professors;
---     RETURN next_id;
--- END;
--- $$ LANGUAGE plpgsql;
-
--- -- 2. Function to insert a new professor
--- CREATE OR REPLACE FUNCTION insert_professor(
---     p_professorName VARCHAR(100),
---     p_departmentId INT,
---     p_dob DATE,
---     p_gender VARCHAR(10)
--- )
--- RETURNS VOID AS $$
--- DECLARE
---     v_professorId INT;
--- BEGIN
---     -- Get next available professor ID
---     v_professorId := get_next_professor_id();
-    
---     -- Insert into Professors table
---     INSERT INTO Professors (professorId, professorName, departmentId, dob, gender)
---     VALUES (v_professorId, p_professorName, p_departmentId, p_dob, p_gender);
--- END;
--- $$ LANGUAGE plpgsql;
-
--- -- 3. Trigger function to create login credentials
--- CREATE OR REPLACE FUNCTION create_professor_login()
--- RETURNS TRIGGER AS $$
--- BEGIN
---     -- Insert into UserLogin with professor ID as password
---     INSERT INTO UserLogin (role, userId, password)
---     VALUES ('professor', NEW.professorId, NEW.professorId::VARCHAR);
---     RETURN NEW;
--- END;
--- $$ LANGUAGE plpgsql;
-
--- -- 4. Create the trigger on Professors table
--- CREATE TRIGGER after_professor_insert
--- AFTER INSERT ON Professors
--- FOR EACH ROW
--- EXECUTE FUNCTION create_professor_login();
--- 1. Function to generate the next professor ID
 
 CREATE OR REPLACE FUNCTION get_next_professor_id()
 RETURNS INT AS $$
@@ -470,8 +320,8 @@ BEGIN
     v_professorId := get_next_professor_id();
     
     -- Insert into Professors table
-    INSERT INTO Professors (professorId, professorName, departmentId, dob, gender)
-    VALUES (v_professorId, p_professorName, p_departmentId, p_dob, p_gender);
+    INSERT INTO Professors (professorId, professorName, departmentId, dob, gender, WorkingStatus)
+    VALUES (v_professorId, p_professorName, p_departmentId, p_dob, p_gender, 'Active');
 END;
 $$;
 
@@ -491,8 +341,36 @@ CREATE OR REPLACE TRIGGER after_professor_insert
 AFTER INSERT ON Professors
 FOR EACH ROW
 EXECUTE FUNCTION create_professor_login();
+-----------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------
 
--- 5. Procedure to delete a professor
+CREATE OR REPLACE PROCEDURE delete_student(p_student_id INT)
+LANGUAGE plpgsql AS $$
+BEGIN
+    UPDATE Students
+    SET graduationStatus = 'Discontinued'
+    WHERE studentId = p_student_id;
+
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION handle_discontinued_student_login()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.graduationStatus = 'Discontinued' AND OLD.graduationStatus IS DISTINCT FROM 'Discontinued' THEN
+        DELETE FROM UserLogin WHERE userId = OLD.studentId AND role = 'student';
+    END IF;
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER student_status_update_trigger
+AFTER UPDATE OF graduationStatus ON Students
+FOR EACH ROW
+WHEN (NEW.graduationStatus = 'Discontinued' AND OLD.graduationStatus IS DISTINCT FROM 'Discontinued')
+EXECUTE FUNCTION handle_discontinued_student_login();
+
+-- Modified procedure to update status instead of deleting
 CREATE OR REPLACE PROCEDURE delete_professor(p_professor_id INT)
 LANGUAGE plpgsql AS $$
 DECLARE
@@ -500,33 +378,153 @@ DECLARE
 BEGIN
     -- Check if professor is a department head
     SELECT EXISTS(
-        SELECT 1 
-        FROM Department 
+        SELECT 1
+        FROM Department
         WHERE headOfDeptId = p_professor_id
     ) INTO is_head;
-    
+
     -- If professor is a department head, raise an exception
     IF is_head THEN
-        RAISE EXCEPTION 'Cannot delete professor. They are currently assigned as a department head.';
+        RAISE EXCEPTION 'Cannot mark professor as departed. They are currently assigned as a department head.';
     END IF;
-    
-    -- Delete the professor if not a department head
-    DELETE FROM Professors WHERE professorId = p_professor_id;
+
+    -- Update the professor's status to 'Departed' if not a department head
+    UPDATE Professors
+    SET WorkingStatus = 'Departed'
+    WHERE professorId = p_professor_id;
+
+    -- Note: The UserLogin deletion will be handled by the updated trigger
 END;
 $$;
 
--- 6. Trigger function to delete professor login credentials
-CREATE OR REPLACE FUNCTION delete_professor_login()
+-- Trigger function to handle login deletion upon status change
+CREATE OR REPLACE FUNCTION handle_departed_professor_login()
 RETURNS TRIGGER AS $$
 BEGIN
-    -- Delete from UserLogin
+    -- This function is called when the WHEN condition in the trigger is met.
+    -- It deletes the login for the professor whose status just changed to 'Departed'.
     DELETE FROM UserLogin WHERE userId = OLD.professorId AND role = 'professor';
-    RETURN OLD;
+    RETURN OLD; -- Return value ignored for AFTER triggers, but required syntax.
 END;
 $$ LANGUAGE plpgsql;
 
--- 7. Create trigger to delete login after professor deletion
-CREATE OR REPLACE TRIGGER professor_after_delete
-AFTER DELETE ON Professors
+
+-- Create the new trigger for UPDATE events on WorkingStatus
+CREATE TRIGGER professor_status_update_trigger -- New descriptive name
+AFTER UPDATE OF WorkingStatus ON Professors -- Fire specifically when WorkingStatus might have changed
 FOR EACH ROW
-EXECUTE FUNCTION delete_professor_login();
+-- Only execute the function if the status actually changed TO 'Departed'
+WHEN (NEW.WorkingStatus = 'Departed' AND OLD.WorkingStatus IS DISTINCT FROM 'Departed')
+EXECUTE FUNCTION handle_departed_professor_login(); -- Call the function to delete the login
+
+
+
+-- Function to generate the next department ID
+CREATE OR REPLACE FUNCTION get_next_department_id()
+RETURNS INT AS $$
+DECLARE
+    next_id INT;
+BEGIN
+    -- Start IDs from 1, or use the next available after the max
+    SELECT COALESCE(MAX(departmentId), 0) + 1 INTO next_id FROM Department;
+    RETURN next_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Procedure to insert a new department
+CREATE OR REPLACE PROCEDURE insert_department(
+    p_deptName VARCHAR(100)
+)
+LANGUAGE plpgsql AS $$
+DECLARE
+    v_departmentId INT;
+BEGIN
+    -- Get next available department ID
+    v_departmentId := get_next_department_id();
+
+    -- Insert into Department table, headOfDeptId is NULL initially
+    INSERT INTO Department (departmentId, deptName, headOfDeptId)
+    VALUES (v_departmentId, p_deptName, NULL);
+
+    -- Optionally, you could return the new ID if needed, but procedures don't return values directly.
+    -- You might use an INOUT parameter if the ID needs to be passed back.
+END;
+$$;
+
+-- Function to generate the next degree ID
+CREATE OR REPLACE FUNCTION get_next_degree_id()
+RETURNS INT AS $$
+DECLARE
+    next_id INT;
+BEGIN
+    -- Start IDs from 1, or use the next available after the max
+    SELECT COALESCE(MAX(degreeId), 0) + 1 INTO next_id FROM Degree;
+    RETURN next_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Procedure to insert a new degree
+CREATE OR REPLACE PROCEDURE insert_degree(
+    p_degreeName VARCHAR(100),
+    p_ugPgType VARCHAR(2),
+    p_maxYears INT,
+    p_totalCreditsRequired INT,
+    p_coreCreditsRequired INT
+)
+LANGUAGE plpgsql AS $$
+DECLARE
+    v_degreeId INT;
+BEGIN
+    -- Validate core credits against total credits before inserting
+    IF p_coreCreditsRequired > p_totalCreditsRequired THEN
+        RAISE EXCEPTION 'Core credits required (%) cannot exceed total credits required (%).', p_coreCreditsRequired, p_totalCreditsRequired;
+    END IF;
+
+    -- Get next available degree ID
+    v_degreeId := get_next_degree_id();
+
+    -- Insert into Degree table
+    INSERT INTO Degree (degreeId, degreeName, ugPgType, maxYears, totalCreditsRequired, coreCreditsRequired)
+    VALUES (v_degreeId, p_degreeName, p_ugPgType, p_maxYears, p_totalCreditsRequired, p_coreCreditsRequired);
+END;
+$$;
+
+-- Function to get detailed course offerings for a specific term
+CREATE OR REPLACE FUNCTION get_course_offerings_by_term(p_termId INT)
+RETURNS TABLE (
+    offering_id INT,
+    course_id INT,
+    course_name VARCHAR(100),
+    course_type VARCHAR(20), -- Theory/Lab
+    ug_pg_type VARCHAR(2),   -- UG/PG
+    credits INT,
+    dept_name VARCHAR(100),
+    professor_id INT,
+    professor_name VARCHAR(100),
+    max_capacity INT
+)
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        co.offeringId,
+        c.courseId,
+        c.courseName,
+        c.courseType,
+        c.typeOfCourse, -- UG/PG from Courses table
+        c.credits,
+        d.deptName,
+        p.professorId,
+        p.professorName,
+        co.maxCapacity
+    FROM CourseOffering co
+    JOIN Courses c ON co.courseId = c.courseId
+    JOIN Professors p ON co.professorId = p.professorId
+    JOIN Department d ON c.departmentId = d.departmentId
+    WHERE co.termId = p_termId
+    ORDER BY d.deptName, c.courseName;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Example Usage (how you'd call it in SQL):
+-- SELECT * FROM get_course_offerings_by_term(1); -- Assuming termId 1 exists
