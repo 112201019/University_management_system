@@ -417,7 +417,7 @@ def add_courses():
 
         courses = [dict(c) for c in courses]
         for course in courses:
-            course["can_add"] = not course["enrollmentStatus"] or course["enrollmentStatus"] == "Dropped"
+            course["can_add"] = (not course["enrollmentStatus"] or course["enrollmentStatus"] == "Dropped") and not course["previousTermName"]
             course["can_drop"] = course["enrollmentStatus"] == "Pending"
 
     return render_template('student/add_courses.html', username=session['username'], courses=courses)

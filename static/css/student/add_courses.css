@@ -149,6 +149,7 @@ header h1 {
     background-color: #ffffff;
     border: 1px solid #ddd;
     border-radius: 12px;
+    border-color: #2c3e50;
     overflow: hidden;
     transition: transform 0.3s, box-shadow 0.3s;
 }
@@ -364,40 +365,6 @@ header h1 {
     }
 }
 
-.course-card.completed {
-    border: 2px solid #8e44ad;
-    box-shadow: 0 4px 12px rgba(142, 68, 173, 0.15);
-}
-
-.course-card.pending {
-    border-color: #f39c12;
-    /* your student-name accent */
-    background-color: #fff8ec;
-    /* very pale orange */
-}
-
-.course-card.pending .card-header {
-    background-color: #f39c12;
-    /* stronger accent */
-    color: #2c3e50;
-    /* keep header text readable */
-}
-
-/* DROPPED courses: muted red-pink tint */
-.course-card.dropped {
-    border-color: #e74c3c;
-    /* your drop-btn red */
-    background-color: #fdecea;
-    /* very pale red */
-}
-
-.course-card.dropped .card-header {
-    background-color: #e74c3c;
-    /* matching drop-btn hover red */
-    color: #fff;
-    /* white text for contrast */
-}
-
 /* Badge for completed courses */
 .completed-badge {
     position: absolute;
@@ -427,17 +394,8 @@ header h1 {
 }
 
 /* Approved = green (existing .status-badge), Pending = yellow, Dropped = light red */
-.status-badge.status-pending {
-    background-color: #f1c40f;
-    color: #2c3e50;
-    border: 2px solid #f1c40f;
-}
 
-.status-badge.status-dropped {
-    background-color: #f5b7b1;
-    color: #c0392b;
-    border: 2px solid #e74c3c;
-}
+
 
 /* Drop button styling */
 .drop-btn {
@@ -463,4 +421,53 @@ header h1 {
 .course-card.enrolled .card-header {
     background-color: #27ae60;
     position: relative;
+}
+
+.course-card.pending {
+    border: 2px solid #F29339;
+    box-shadow: 0 4px 12px rgba(39, 174, 96, 0.15);
+}
+
+.course-card.pending .card-header {
+    background-color: #F29339;
+    position: relative;
+}
+
+.course-card.pending h3 {
+    color: white;
+}
+
+.status-badge.status-pending {
+    background-color: #f7d4b5;
+    color: #3a3a3a;
+    border: 2px solid #b56a24;
+}
+
+.status-badge.status-pending .status-icon {
+    color: #3a3a3a;
+}
+
+.course-card.dropped {
+    border-color: #777;
+    background-color: #f3f3f3;
+}
+
+.course-card.dropped .card-header {
+    background-color: #777;
+    color: #fff;
+}
+
+.status-badge.status-dropped {
+    background-color: #d1d1d1;
+    color: #555555;
+    border: 2px solid #555555;
+}
+
+.status-badge.status-dropped .status-icon {
+    color: #555555;
+}
+
+.course-card.completed {
+    border: 2px solid #8e44ad;
+    box-shadow: 0 4px 12px rgba(142, 68, 173, 0.15);
 }

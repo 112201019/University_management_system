@@ -55,7 +55,7 @@
         <div class="courses-grid">
             {% if courses %}
             {% for c in courses %}
-            <div class="course-card {% if c.enrollmentStatus or c.previouslyPassed == 'Passed' %}enrolled{% endif %}">
+            <div class="course-card {{ c.enrollmentStatus|lower }}">
                 <div class="card-header">
                     <h3>
                         {{ c.courseName }}
@@ -69,7 +69,7 @@
                     </div>
                     {% elif c.enrollmentStatus %}
                     <div class="status-badge status-{{ c.enrollmentStatus|lower }}">
-                        <i class="fas fa-{{ 
+                        <i class="status-icon fas fa-{{ 
                                     'check-circle' if c.enrollmentStatus=='Approved' else 
                                     'clock' if c.enrollmentStatus=='Pending' else 
                                     'times-circle' 
