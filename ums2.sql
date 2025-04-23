@@ -89,7 +89,6 @@ ALTER TABLE Professors ADD FOREIGN KEY (departmentId) REFERENCES Department(depa
 ALTER TABLE Students ADD FOREIGN KEY (degreeId) REFERENCES Degree(degreeId);
 ALTER TABLE Students ADD FOREIGN KEY (departmentId) REFERENCES Department(departmentId);
 ALTER TABLE Courses ADD FOREIGN KEY (departmentId) REFERENCES Department(departmentId);
-ALTER TABLE Courses ADD FOREIGN KEY (professorId) REFERENCES Professors(professorId);
 ALTER TABLE CourseOffering ADD FOREIGN KEY (courseId) REFERENCES Courses(courseId);
 ALTER TABLE CourseOffering ADD FOREIGN KEY (termId) REFERENCES AcademicTerm(termId);
 ALTER TABLE CourseOffering ADD FOREIGN KEY (professorId) REFERENCES Professors(professorId);
@@ -154,7 +153,7 @@ VALUES
   (3000006, 'Data Science Lab', 2, 'UG', 'Lab', 2);
 
 -- Department 3 Courses
-INSERT INTO Courses (courseId, courseName, departmentId, typeOfCourse, professorId, courseType, credits)
+INSERT INTO Courses (courseId, courseName, departmentId, typeOfCourse, courseType, credits)
 VALUES
   (3000007, 'Circuits and Electronics', 3, 'UG',  'Theory', 4),
   (3000008, 'Electrical Machines', 3, 'UG',  'Theory', 4),
@@ -176,43 +175,47 @@ VALUES
 INSERT INTO CourseOffering (offeringId, courseId, termId, professorId, maxCapacity)
 VALUES
   -- For Department 1
-  (4000001, 3000001, 2, 10001, 30),
-  (4000002, 3000002, 2, 10001, 30),
+  (4000002, 3000001, 2, 10001, 30),
+  (4000003, 3000002, 2, 10001, 30),
   -- For Department 2
-  (4000003, 3000004, 2, 10002, 25),
-  (4000004, 3000005, 2, 10002, 25),
+  (4000004, 3000004, 2, 10002, 25),
+  (4000005, 3000005, 2, 10002, 25),
   -- For Department 3
-  (4000005, 3000007, 2, 10003, 20),
-  (4000006, 3000008, 2, 10003, 20);
+  (4000006, 3000007, 2, 10003, 20),
+  (4000007, 3000008, 2, 10003, 20),
+  (4000008, 3000003, 2, 10001, 25);
 
 -- Past term offering (termId = 1) to demonstrate StudentGrades entry.
 INSERT INTO CourseOffering (offeringId, courseId, termId, professorId, maxCapacity)
 VALUES
-  (4000007, 3000003, 1, 10001, 30);
+  (4000000, 3000005, 1, 10001, 25),
+  (4000001, 3000003, 1, 10001, 30);
 
 -- 9. Insert Enrollments
 -- Enroll each student in at least one current course offering:
-INSERT INTO Enrollment (enrollmentId, studentId, offeringId, enrollmentDate, status)
-VALUES
+-- INSERT INTO Enrollment (enrollmentId, studentId, offeringId, enrollmentDate, status)
+-- VALUES
   -- Department 1 current enrollments
-  (5000001, 2000001, 4000001, '2025-04-10', 'Approved'),
-  (5000002, 2000002, 4000002, '2025-04-10', 'Approved'),
-  -- Department 2 current enrollments
-  (5000003, 2000003, 4000003, '2025-04-10', 'Approved'),
-  (5000004, 2000004, 4000004, '2025-04-10', 'Approved'),
-  -- Department 3 current enrollments
-  (5000005, 2000005, 4000005, '2025-04-10', 'Approved'),
-  (5000006, 2000006, 4000006, '2025-04-10', 'Approved');
+  -- (5000002, 2000001, 4000002, '2025-04-10', 'Approved'),
+  -- (5000003, 2000002, 4000003, '2025-04-10', 'Approved'),
+  -- -- Department 2 current enrollments
+  -- (5000004, 2000003, 4000004, '2025-04-10', 'Approved'),
+  -- (5000005, 2000004, 4000005, '2025-04-10', 'Approved'),
+  -- -- Department 3 current enrollments
+  -- (5000006, 2000005, 4000006, '2025-04-10', 'Approved'),
+  -- (5000007, 2000006, 4000007, '2025-04-10', 'Approved');
 
 -- Additionally, enroll student 201 in the past term course offering (for a completed course)
 INSERT INTO Enrollment (enrollmentId, studentId, offeringId, enrollmentDate, status)
 VALUES
-  (5000007, 2000001, 4000007, '2024-09-05', 'Approved');
+  (5000001, 2000001, 4000001, '2024-09-05', 'Approved'),
+  (5000002, 2000001, 4000000, '2024-09-05', 'Approved');
 
 -- 10. Insert Student Grades for the completed enrollment from the past term
 INSERT INTO StudentGrades (enrollmentId, grade, remarks)
 VALUES
-  (5000007, 85.50, 'Good performance');
+  (5000001, 85.50, 'Good performance'),
+  (5000002, 90.00, 'Top of the Class');
 
 -- 11. Insert UserLogins
 INSERT INTO UserLogin (role, userId, password)
@@ -227,7 +230,3 @@ VALUES
   ('professor', 10002, '10002'),
   ('professor', 10003, '10003'),
   ('admin', 9999999, '9999999');
-
-CREATE ROLE student;
-CREATE ROLE professor;
-CREATE ROLE admin;
