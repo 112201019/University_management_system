@@ -153,7 +153,7 @@ VALUES
   (3000006, 'Data Science Lab', 2, 'UG', 'Lab', 2);
 
 -- Department 3 Courses
-INSERT INTO Courses (courseId, courseName, departmentId, typeOfCourse, professorId, courseType, credits)
+INSERT INTO Courses (courseId, courseName, departmentId, typeOfCourse, courseType, credits)
 VALUES
   (3000007, 'Circuits and Electronics', 3, 'UG',  'Theory', 4),
   (3000008, 'Electrical Machines', 3, 'UG',  'Theory', 4),
@@ -175,19 +175,19 @@ VALUES
 INSERT INTO CourseOffering (offeringId, courseId, termId, professorId, maxCapacity)
 VALUES
   -- For Department 1
-  (4000001, 3000001, 1, 10001, 30),
-  (4000002, 3000002, 1, 10001, 30),
+  (4000001, 3000001, 2, 10001, 30),
+  (4000002, 3000002, 2, 10001, 30),
   -- For Department 2
-  (4000003, 3000004, 1, 10002, 25),
-  (4000004, 3000005, 1, 10002, 25),
+  (4000003, 3000004, 2, 10002, 25),
+  (4000004, 3000005, 2, 10002, 25),
   -- For Department 3
-  (4000005, 3000007, 1, 10003, 20),
-  (4000006, 3000008, 1, 10003, 20);
+  (4000005, 3000007, 2, 10003, 20),
+  (4000006, 3000008, 2, 10003, 20);
 
 -- Past term offering (termId = 2) to demonstrate StudentGrades entry.
 INSERT INTO CourseOffering (offeringId, courseId, termId, professorId, maxCapacity)
 VALUES
-  (4000007, 3000003, 2, 10001, 30);
+  (4000007, 3000003, 1, 10001, 30);
 
 -- 9. Insert Enrollments
 -- Enroll each student in at least one current course offering:

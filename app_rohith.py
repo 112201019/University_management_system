@@ -238,6 +238,122 @@ def view_profile_professor():
         head_name=head_name
     )
 
+@app.route('/professor/grade_submission', methods=['GET'])
+def professor_gradebook():
+    if session.get('role') != 'professor':
+        return redirect(url_for('login'))
+
+    professor_id = session.get('user_id')
+    # load all current terms and offerings taught by this professor
+    terms_sql = """
+        SELECT DISTINCT at.termId, at.termName
+        FROM AcademicTerm at
+        JOIN CourseOffering co ON at.termId = co.termId
+        WHERE co.professorId = :professor_id
+        ORDER BY at.startDate DESC
+    """
+    try:
+        terms_result = db.execute_dql_commands(terms_sql, {'professor_id': professor_id})
+    except Exception:
+        flash("Could not load academic terms. See server log for details.")
+        terms = []
+    else:
+        terms = terms_result.mappings().all()
+
+    selected_term = request.args.get('term_id', type=int)
+    selected_offering = request.args.get('offering_id', type=int)
+
+    offerings = []
+    students = []
+    if selected_term:
+        offerings_sql = """
+            SELECT co.offeringId, c.courseName
+            FROM CourseOffering co
+            JOIN Courses c ON co.courseId = c.courseId
+            WHERE co.professorId = :professor_id
+              AND co.termId = :term_id
+        """
+        offerings = db.execute_dql_commands(offerings_sql, {
+            'professor_id': professor_id,
+            'term_id': selected_term
+        }).mappings().all()
+
+    if selected_offering:
+        # fetch all approved enrollments and any existing grade
+        students_sql = """
+            SELECT 
+              e.enrollmentId,
+              s.studentId,
+              s.studentName,
+              sg.grade,
+              sg.remarks
+            FROM Enrollment e
+            JOIN Students s ON e.studentId = s.studentId
+            LEFT JOIN StudentGrades sg ON e.enrollmentId = sg.enrollmentId
+            WHERE e.offeringId = :offering_id
+              AND e.status = 'Approved'
+        """
+        students = db.execute_dql_commands(students_sql, {
+            'offering_id': selected_offering
+        }).mappings().all()
+
+    return render_template(
+        'professor_grades.html',
+        username=session.get('username'),
+        terms=terms,
+        offerings=offerings,
+        students=students,
+        selected_term=selected_term,
+        selected_offering=selected_offering
+    )
+
+@app.route('/professor/grade_submission', methods=['POST'])
+def submit_grades():
+    if session.get('role') != 'professor':
+        return redirect(url_for('login'))
+
+    # iterate over submitted grades
+    for key, val in request.form.items():
+        if key.startswith('grade_'):
+            enrollment_id = int(key.split('_', 1)[1])
+            grade = float(val) if val else None
+            remarks = request.form.get(f'remarks_{enrollment_id}', '').strip()
+
+            # only process if a grade was entered
+            if grade is not None:
+                # check if an entry already exists
+                exists_sql = "SELECT 1 FROM StudentGrades WHERE enrollmentId = :enrollment_id"
+                exists = db.execute_dql_commands(exists_sql, {'enrollment_id': enrollment_id}).fetchone()
+
+                if exists:
+                    upd_sql = """
+                        UPDATE StudentGrades
+                        SET grade = :grade, remarks = :remarks
+                        WHERE enrollmentId = :enrollment_id
+                    """
+                    db.execute_ddl_and_dml_commands(upd_sql, {
+                        'grade': grade,
+                        'remarks': remarks,
+                        'enrollment_id': enrollment_id
+                    })
+                else:
+                    ins_sql = """
+                        INSERT INTO StudentGrades (enrollmentId, grade, remarks)
+                        VALUES (:enrollment_id, :grade, :remarks)
+                    """
+                    db.execute_ddl_and_dml_commands(ins_sql, {
+                        'enrollment_id': enrollment_id,
+                        'grade': grade,
+                        'remarks': remarks
+                    })
+
+    flash('Grades submitted successfully.')
+    # redirect back to the same gradebook view
+    term = request.form.get('selected_term')
+    offering = request.form.get('selected_offering')
+    return redirect(url_for('professor_gradebook', term_id=term, offering_id=offering))
+
+
 
 
 @app.route('/logout')
@@ -379,3 +495,6 @@ def drop_courses():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+# --- at the bottom of your app, before `if __name__ == '__main__':` ---
+
