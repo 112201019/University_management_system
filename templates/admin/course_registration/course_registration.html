@@ -1,23 +1,250 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Course Registration Control</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin/course_registration.css') }}">
+    <!-- Link to the base style sheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin/style.css') }}" />
+    <!-- Add specific styles for this page -->
+    <style>
+        /* Define some CSS variables for easier theming */
+        :root {
+            --primary-color: #007bff; /* Blue */
+            --secondary-color: #6c757d; /* Gray */
+            --success-color: #28a745; /* Green */
+            --warning-color: #ffc107; /* Yellow */
+            --danger-color: #dc3545;  /* Red */
+            --light-bg-color: #f8f9fa; /* Very light gray */
+            --border-color: #dee2e6;
+            --text-color: #212529;
+            --text-muted-color: #6c757d;
+            --section-bg-color: #ffffff; /* White background for sections */
+            --box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+            --border-radius: 0.3rem; /* Consistent border radius */
+        }
+
+        /* Apply base font and color from style.css or define here */
+        body {
+            font-family: sans-serif; /* Or inherit from style.css */
+            color: var(--text-color);
+            background-color: var(--light-bg-color); /* Light page background */
+        }
+
+        /* Container adjustments if needed */
+        .container {
+            padding-top: 1rem; /* Add some padding below the header */
+            padding-bottom: 2rem;
+        }
+
+        /* Status Section Styling */
+        .status-section {
+            margin-bottom: 1.5rem;
+            padding: 1.5rem; /* Increased padding */
+            background-color: var(--section-bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow); /* Add subtle depth */
+        }
+        .status-section h2 {
+            margin-top: 0;
+            margin-bottom: 1rem;
+            font-size: 1.25em; /* Slightly larger heading */
+            color: var(--primary-color); /* Use primary color for headings */
+            border-bottom: none; /* Remove border if not desired */
+        }
+        .status-text {
+            margin-bottom: 1rem; /* Space between status and button */
+        }
+        .status-label { /* Style the "Current Status:" part */
+            color: var(--text-muted-color);
+        }
+        .status-value { /* Style the actual status value */
+            font-weight: bold;
+            padding: 0.2em 0.5em; /* Add padding */
+            border-radius: var(--border-radius);
+            display: inline-block; /* Needed for padding/background */
+            margin-left: 5px; /* Space after label */
+        }
+        .status-open {
+            color: white; /* White text on green */
+            background-color: var(--success-color);
+        }
+        .status-closed {
+            color: white; /* White text on red */
+            background-color: var(--danger-color);
+        }
+
+        /* Button Styling */
+        .action-button {
+            padding: 0.5rem 1rem; /* Slightly larger padding */
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 500;
+            transition: background-color 0.2s ease-in-out, opacity 0.2s ease-in-out; /* Smooth transition */
+        }
+        .action-button.btn-success {
+            background-color: var(--success-color);
+            color: white;
+        }
+        .action-button.btn-warning {
+            background-color: var(--warning-color);
+            color: var(--text-color); /* Darker text on yellow */
+        }
+        .action-button:hover:not(:disabled) {
+            opacity: 0.85; /* Slight fade on hover */
+        }
+        .action-button:disabled {
+            background-color: #ccc; /* Muted gray background */
+            color: #666;         /* Darker gray text */
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        /* Helper Text Styling */
+        .disabled-info {
+            font-size: 0.85em;
+            color: var(--text-muted-color);
+            margin-top: 0.5rem; /* Space above the text */
+        }
+
+        /* Message Styling (Refined) */
+        .message {
+            padding: 1rem; /* More padding */
+            margin-bottom: 1.5rem;
+            border: 1px solid transparent; /* Base border */
+            border-radius: var(--border-radius);
+            display: flex; /* Allows for icon placement if added later */
+            align-items: center;
+        }
+        .message.info { background-color: #e7f3fe; border-color: #d0e3f0; color: #0c5460; }
+        .message.warning { background-color: #fff3cd; border-color: #ffeeba; color: #856404; }
+        .message.danger, .message.error { background-color: #f8d7da; border-color: #f5c6cb; color: #721c24;}
+        .message.success { background-color: #d4edda; border-color: #c3e6cb; color: #155724;}
+
+        /* Back Button Styling */
+         .back-button {
+            display: inline-block;
+            margin-top: 2rem; /* More space above */
+            padding: 0.6rem 1.2rem;
+            background-color: var(--secondary-color);
+            color: white;
+            text-decoration: none;
+            border-radius: var(--border-radius);
+            transition: background-color 0.2s ease;
+         }
+         .back-button:hover {
+             background-color: #5a6268; /* Darker gray on hover */
+             color: white; /* Ensure text remains white */
+         }
+    </style>
 </head>
+
 <body>
-    <div class="container">
-        <h1>Course Registration Window</h1>
-        <p>Current Status: 
-            <span class="{{ 'status-open' if enroll_status else 'status-closed' }}">
-                {{ 'OPEN' if enroll_status else 'CLOSED' }}
-            </span>
-        </p>
-        <form method="POST">
-            <button type="submit" class="toggle-btn">
-                {{ 'Close Registration' if enroll_status else 'Open Registration' }}
+    <header>
+        <h1>Course Registration Control</h1>
+        <div class="user-dropdown">
+            <button class="dropdown-btn">
+                <div class="profile-avatar">👤</div>
+                <span class="dropdown-arrow">▼</span>
             </button>
-        </form>
+            <div class="dropdown-content">
+                <a href="{{ url_for('logout') }}" class="logout-option">
+                    <div class="icon">🚪</div>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                 <div>
+                 {% for category, message in messages %}
+                    <div class="message {{ category or 'info' }}">{{ message }}</div>
+                 {% endfor %}
+                 </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Use a single form for both actions -->
+        <form method="POST" action="{{ url_for('course_registration_control') }}">
+
+            <!-- Student Enrollment Control -->
+            <div class="status-section">
+                <h2>Student Enrollment Window</h2>
+                <p class="status-text">
+                    <span class="status-label">Current Status:</span>
+                    <span class="status-value {{ 'status-open' if student_status else 'status-closed' }}">
+                        {{ 'OPEN' if student_status else 'CLOSED' }}
+                    </span>
+                </p>
+                <button type="submit" name="action" value="toggle_student"
+                        class="action-button {{ 'btn-warning' if student_status else 'btn-success' }}"
+                        {% if prof_status and not student_status %}disabled{% endif %}>
+                    {{ 'Close Student Enrollment' if student_status else 'Open Student Enrollment' }}
+                </button>
+                {% if prof_status and not student_status %}
+                     <small class="disabled-info d-block">(Cannot open while Professor Approval is active)</small>
+                 {% endif %}
+            </div>
+
+            <!-- Professor Approval Control -->
+            <div class="status-section">
+                <h2>Professor Approval Window</h2>
+                <p class="status-text">
+                     <span class="status-label">Current Status:</span>
+                    <span class="status-value {{ 'status-open' if prof_status else 'status-closed' }}">
+                        {{ 'OPEN' if prof_status else 'CLOSED' }}
+                    </span>
+                </p>
+                <button type="submit" name="action" value="toggle_prof"
+                        class="action-button {{ 'btn-warning' if prof_status else 'btn-success' }}"
+                        {% if student_status and not prof_status %}disabled{% endif %}>
+                    {{ 'Close Professor Approval' if prof_status else 'Open Professor Approval' }}
+                </button>
+                 {% if student_status and not prof_status %}
+                    <small class="disabled-info d-block">(Cannot open while Student Enrollment is active)</small>
+                 {% endif %}
+            </div>
+
+        </form> <!-- End of form -->
+
+         <!-- Link back to a dashboard or list -->
+         <div>
+             <a href="{{ url_for('admin_dashboard') or '#' }}" class="back-button">Back to Dashboard</a>
+         </div>
+
     </div>
+
+    <!-- JavaScript for Dropdown (same as dashboard example) -->
+    <script>
+        // Ensure dropdown JS doesn't conflict if header structure changed significantly
+        const dropdownBtn = document.querySelector('.dropdown-btn');
+        const dropdownContent = document.querySelector('.dropdown-content');
+
+        if (dropdownBtn && dropdownContent) {
+            dropdownBtn.addEventListener('click', function () {
+                dropdownContent.classList.toggle('show');
+            });
+
+            window.addEventListener('click', function (event) {
+                if (!event.target.matches('.dropdown-btn') &&
+                    !event.target.matches('.dropdown-arrow') &&
+                    !event.target.matches('.profile-avatar')) {
+                    if (dropdownContent.classList.contains('show')) {
+                        dropdownContent.classList.remove('show');
+                    }
+                }
+            });
+        }
+    </script>
 </body>
+
 </html>

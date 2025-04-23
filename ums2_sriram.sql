@@ -528,3 +528,84 @@ $$ LANGUAGE plpgsql;
 
 -- Example Usage (how you'd call it in SQL):
 -- SELECT * FROM get_course_offerings_by_term(1); -- Assuming termId 1 exists
+
+-- Function to generate the next course ID
+CREATE OR REPLACE FUNCTION get_next_course_id()
+RETURNS INT AS $$
+DECLARE
+    next_id INT;
+BEGIN
+    -- Start IDs from 3000001 based on your sample data, or use MAX + 1
+    SELECT COALESCE(MAX(courseId), 3000000) + 1 INTO next_id FROM Courses;
+    RETURN next_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Procedure to insert a new course
+CREATE OR REPLACE PROCEDURE insert_course(
+    p_courseName VARCHAR(100),
+    p_departmentId INT,
+    p_typeOfCourse VARCHAR(2), -- UG/PG
+    p_courseType VARCHAR(20),  -- Theory/Lab
+    p_credits INT
+)
+LANGUAGE plpgsql AS $$
+DECLARE
+    v_courseId INT;
+BEGIN
+    -- Optional: Add specific validation if needed, beyond table constraints
+    -- Example: Check if department exists (though FK constraint handles this)
+    -- IF NOT EXISTS (SELECT 1 FROM Department WHERE departmentId = p_departmentId) THEN
+    --     RAISE EXCEPTION 'Department with ID % does not exist.', p_departmentId;
+    -- END IF;
+
+    -- Get next available course ID
+    v_courseId := get_next_course_id();
+
+    -- Insert into Courses table
+    INSERT INTO Courses (courseId, courseName, departmentId, typeOfCourse, courseType, credits)
+    VALUES (v_courseId, p_courseName, p_departmentId, p_typeOfCourse, p_courseType, p_credits);
+END;
+$$;
+
+CREATE OR REPLACE PROCEDURE assign_hod(
+    p_departmentId INT,
+    p_professorId INT
+)
+LANGUAGE plpgsql AS $$
+DECLARE
+    v_prof_dept_id INT;
+    v_prof_status VARCHAR(10);
+BEGIN
+    -- 1. Check if the chosen professor exists, is active, and get their department
+    SELECT departmentId, WorkingStatus
+    INTO v_prof_dept_id, v_prof_status
+    FROM Professors
+    WHERE professorId = p_professorId;
+
+    -- Raise error if professor not found or not active
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Professor with ID % does not exist.', p_professorId;
+    END IF;
+
+    IF v_prof_status <> 'Active' THEN
+        RAISE EXCEPTION 'Professor % is not currently Active (Status: %).', p_professorId, v_prof_status;
+    END IF;
+
+    -- 2. Check if the professor belongs to the target department
+    IF v_prof_dept_id <> p_departmentId THEN
+        RAISE EXCEPTION 'Professor % does not belong to Department %.', p_professorId, p_departmentId;
+    END IF;
+
+    -- 3. Update the Department table
+    UPDATE Department
+    SET headOfDeptId = p_professorId
+    WHERE departmentId = p_departmentId;
+
+    -- Check if the update was successful (optional, department might not exist)
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Department with ID % does not exist.', p_departmentId;
+    END IF;
+
+END;
+$$;

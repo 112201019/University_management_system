@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Course Offerings by Term</title>
+    <!-- Link to the same style sheet as the dashboard example -->
+    <!-- Adjust the path if this HTML file is in a different directory depth -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin/style.css') }}" />
+    <!-- Add specific styles for this page if needed, or rely on style.css -->
+    <style>
+        /* Basic styles for form and table if not covered by style.css */
+        .term-selection-form {
+            margin-bottom: 2rem;
+            display: flex; /* Use flexbox for inline layout */
+            align-items: center; /* Align items vertically */
+            gap: 10px; /* Add space between elements */
+            flex-wrap: wrap; /* Allow wrapping on smaller screens */
+        }
+
+        .term-selection-form label {
+            font-weight: bold;
+        }
+
+        .term-selection-form select,
+        .term-selection-form button {
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+         .term-selection-form button {
+             background-color: #007bff; /* Example color */
+             color: white;
+             cursor: pointer;
+         }
+         .term-selection-form button:hover {
+            background-color: #0056b3;
+         }
+
+        .offerings-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .offerings-table th,
+        .offerings-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .offerings-table th {
+            background-color: #f2f2f2; /* Light grey header */
+        }
+        .offerings-table tr:nth-child(even) {
+            background-color: #f9f9f9; /* Zebra striping */
+        }
+
+        /* Style for messages if style.css doesn't cover them */
+        .message {
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+        .message.info { background-color: #e7f3fe; border: 1px solid #d0e3f0; color: #31708f; }
+        .message.warning { background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; }
+        .message.error { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24;}
+        .message.success { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724;}
+
+        /* Ensure Back button fits in */
+         .back-link {
+            display: inline-block; /* Allow styling as a block */
+            margin-top: 20px;
+            padding: 8px 15px;
+            background-color: #6c757d; /* Secondary color */
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+         }
+         .back-link:hover {
+             background-color: #5a6268;
+         }
+
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Course Offerings</h1> <!-- Updated Title -->
+        <div class="user-dropdown">
+            <button class="dropdown-btn">
+                <div class="profile-avatar">👤</div>
+                <span class="dropdown-arrow">▼</span>
+            </button>
+            <div class="dropdown-content">
+                <a href="{{ url_for('logout') }}" class="logout-option">
+                    <div class="icon">🚪</div>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                 <div>
+                 {% for category, message in messages %}
+                    <!-- Use generic message classes unless style.css defines alert classes -->
+                    <div class="message {{ category or 'info' }}">{{ message }}</div>
+                 {% endfor %}
+                 </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Term Selection Form -->
+        <form method="GET" action="{{ url_for('view_courses_by_term') }}" class="term-selection-form">
+            <label for="term_id">Select Academic Term:</label>
+            <select id="term_id" name="term_id" required>
+                <option value="" disabled {% if not selected_term_id %}selected{% endif %}>-- Select a Term --</option>
+                {% for term in terms %}
+                    <option value="{{ term.termId }}" {% if term.termId == selected_term_id %}selected{% endif %}>
+                        {{ term.termName }} (Starts: {{ term.startDate.strftime('%Y-%m-%d') }})
+                    </option>
+                {% else %}
+                     <option value="" disabled>No terms available</option>
+                {% endfor %}
+            </select>
+            <button type="submit">View Courses</button>
+        </form>
+
+        <hr>
+
+        <!-- Display Course Offerings for the Selected Term -->
+        <h2>Offerings for Term: {{ selected_term_name }}</h2>
+
+        {% if offerings %}
+            <table class="offerings-table"> <!-- Use a specific class -->
+                <thead>
+                    <tr>
+                        <th>Course ID</th>
+                        <th>Course Name</th>
+                        <th>Department</th>
+                        <th>Type</th> <!-- Theory/Lab -->
+                        <th>Level</th> <!-- UG/PG -->
+                        <th>Credits</th>
+                        <th>Professor</th>
+                        <th>Capacity</th>
+                        <th>Offering ID</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for offering in offerings %}
+                        <tr>
+                            <td>{{ offering.courseId }}</td>
+                            <td>{{ offering.courseName }}</td>
+                            <td>{{ offering.deptName }}</td>
+                            <td>{{ offering.courseType or 'N/A' }}</td>
+                            <td>{{ offering.ugPgType }}</td>
+                            <td>{{ offering.credits }}</td>
+                            <td>{{ offering.professorName }} (ID: {{ offering.professorId }})</td>
+                            <td>{{ offering.maxCapacity }}</td>
+                            <td>{{ offering.offeringId }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% elif selected_term_id %}
+             <!-- Use generic message class -->
+            <div class="message info">
+                No courses are currently offered for the selected term ({{ selected_term_name }}).
+            </div>
+        {% else %}
+             <!-- Use generic message class -->
+             <div class="message warning">
+                Please select an academic term to view course offerings.
+            </div>
+        {% endif %}
+
+         <!-- Link back to a dashboard or list -->
+         <!-- Use a simple link with class for styling -->
+         <div>
+             <a href="{{ url_for('admin_dashboard') or '#' }}" class="back-link">Back to Dashboard</a>
+             <!-- Replace 'admin_dashboard' with your actual dashboard route name -->
+         </div>
+
+    </div>
+
+    <!-- JavaScript for Dropdown (same as dashboard example) -->
+    <script>
+        document.querySelector('.dropdown-btn').addEventListener('click', function () {
+            document.querySelector('.dropdown-content').classList.toggle('show');
+        });
+        window.addEventListener('click', function (event) {
+            if (!event.target.matches('.dropdown-btn') &&
+                !event.target.matches('.dropdown-arrow') &&
+                !event.target.matches('.profile-avatar')) {
+                const dropdown = document.querySelector('.dropdown-content');
+                if (dropdown && dropdown.classList.contains('show')) {
+                    dropdown.classList.remove('show');
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

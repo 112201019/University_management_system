@@ -4,13 +4,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Dashboard</title>
+  <title>Professor Dashboard</title>
   <link rel="stylesheet" href="../../static/css/admin/style.css" />
 </head>
 
 <body>
   <header>
-    <h1>Welcome Back,  <span class="admin-name">{{ username }}</span>!</h1>
+    <h1>Professors</h1>
     <div class="user-dropdown">
       <button class="dropdown-btn">
         <div class="profile-avatar">👤</div>
@@ -27,48 +27,22 @@
 
   <div class="container">
     <div class="welcome-message">
-      <h2>Your Administrative Portal</h2>
-      <p>Manage students, professors, courses, and enrollments from here</p>
+      <h2>Manage Professors</h2>
     </div>
 
     <div class="dashboard">
       <div class="dashboard-item">
-        <a href="{{ url_for('admin_student') }}">
-          <div class="icon">👥</div>
-          <div class="title">Students</div>
+        <a href="{{ url_for('add_department') }}">
+          <div class="icon">➕</div>
+          <div class="title">Add Department</div>
         </a>
       </div>
       <div class="dashboard-item">
-        <a href="{{ url_for('admin_professor') }}">
+        <a href="{{ url_for('assign_hod_route') }}">
           <div class="icon">👨‍🏫</div>
-          <div class="title">Professor</div>
+          <div class="title">Assign HOD for a department</div>
         </a>
       </div>
-      <div class="dashboard-item">
-        <a href="{{ url_for('admin_course') }}">
-          <div class="icon">📚</div>
-          <div class="title">Courses</div>
-        </a>
-      </div>
-      <div class="dashboard-item">
-        <a href="{{ url_for('course_registration_control') }}">
-          <div class="icon">📝</div>
-          <div class="title">Course registration</div>
-        </a>
-      </div>
-      <div class="dashboard-item">
-        <a href="{{ url_for('add_degree') }}">
-          <div class="icon">📚</div>
-          <div class="title">Add Degree</div>
-        </a>
-      </div>
-      <div class="dashboard-item">
-        <a href="{{ url_for('dept') }}">
-          <div class="icon">📚</div>
-          <div class="title">Department</div>
-        </a>
-      </div>
-      
     </div>
   </div>
 

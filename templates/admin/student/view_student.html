@@ -1,31 +1,179 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>View Student Details</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Student Details - {{ student.studentName }}</title>
+    <!-- Link to the base style sheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin/style.css') }}" />
+    <!-- Add specific styles for this page -->
+    <style>
+        /* Define CSS variables if not globally available */
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --warning-hover-color: #e0a800; /* Darker yellow */
+            --info-color: #17a2b8; /* Like primary but maybe for other info */
+            --light-bg-color: #f8f9fa;
+            --border-color: #dee2e6;
+            --table-border-color: #e9ecef; /* Slightly lighter border for tables */
+            --text-color: #212529;
+            --text-muted-color: #6c757d;
+            --section-bg-color: #ffffff;
+            --box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            --border-radius: 0.3rem;
+        }
+
+        /* Basic styles for the details card */
+        .details-card {
+            margin-top: 1.5rem;
+            background-color: var(--section-bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            overflow: hidden; /* Contain borders */
+        }
+        .details-header {
+            padding: 1rem 1.5rem;
+            background-color: #f7f7f7; /* Slightly off-white header */
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .details-header h3 {
+            margin: 0;
+            font-size: 1.4em;
+            color: var(--primary-color);
+        }
+        .details-body {
+            padding: 1.5rem;
+        }
+        .details-grid { /* Grid for the two tables */
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        /* Table Styling */
+        .details-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1rem; /* Space below table if grid doesn't provide enough */
+        }
+        .details-table th,
+        .details-table td {
+            border: 1px solid var(--table-border-color);
+            padding: 0.75rem;
+            text-align: left;
+            vertical-align: top; /* Align content top */
+        }
+        .details-table th {
+            background-color: #f8f9fa; /* Light header */
+            font-weight: bold;
+            width: 35%; /* Adjust width for header column */
+        }
+        .details-table td {
+            background-color: #fff;
+        }
+
+        /* Status Badge Styling */
+        .status-badge {
+            display: inline-block;
+            padding: 0.35em 0.65em;
+            font-size: 0.85em;
+            font-weight: 700;
+            line-height: 1;
+            color: #fff; /* Default white text */
+            text-align: center;
+            white-space: nowrap;
+            vertical-align: baseline;
+            border-radius: var(--border-radius);
+        }
+        .status-graduated { background-color: var(--success-color); }
+        .status-in-progress { background-color: var(--primary-color); }
+        .status-discontinued { background-color: var(--danger-color); }
+        .status-max-years { background-color: var(--warning-color); color: var(--text-color); } /* Darker text on yellow */
+        .status-other { background-color: var(--secondary-color); } /* Fallback */
+
+
+        /* Edit Button Styling */
+        .edit-button {
+            padding: 0.5rem 1rem;
+            background-color: var(--warning-color);
+            color: var(--text-color); /* Dark text for yellow */
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 0.95em;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-block;
+            transition: background-color 0.2s ease;
+        }
+        .edit-button:hover {
+            background-color: var(--warning-hover-color);
+            color: var(--text-color);
+        }
+
+        /* Breadcrumb Styling (Simple) */
+        .breadcrumbs { list-style: none; padding: 0; margin: 0 0 1rem 0; font-size: 0.9em; }
+        .breadcrumbs li { display: inline; color: var(--text-muted-color); }
+        .breadcrumbs li + li:before { content: "/\00a0"; padding: 0 5px; color: var(--text-muted-color); }
+        .breadcrumbs li a { color: var(--primary-color); text-decoration: none; }
+        .breadcrumbs li a:hover { text-decoration: underline; }
+
+        /* Back Button Styling */
+         .back-button { display: inline-block; margin-top: 2rem; padding: 0.6rem 1.2rem; background-color: var(--secondary-color); color: white; text-decoration: none; border-radius: var(--border-radius); transition: background-color 0.2s ease; }
+         .back-button:hover { background-color: #5a6268; color: white; }
+
+    </style>
 </head>
+
 <body>
-    <div class="container mt-4">
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/admin_student/view_all_students">All Students</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Student Details</li>
+    <header>
+        <h1>Student Details</h1> <!-- Page Title -->
+        <div class="user-dropdown">
+            <button class="dropdown-btn">
+                <div class="profile-avatar">👤</div>
+                <span class="dropdown-arrow">▼</span>
+            </button>
+            <div class="dropdown-content">
+                <a href="{{ url_for('logout') }}" class="logout-option">
+                    <div class="icon">🚪</div>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+
+        <!-- Breadcrumbs -->
+         <nav aria-label="breadcrumb">
+            <ol class="breadcrumbs">
+                <li><a href="{{ url_for('view_all_students') }}">All Students</a></li> {# Ensure route exists #}
+                <li>Student Details</li> {# Current page #}
             </ol>
         </nav>
-        
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h3>Student Details</h3>
-                <a href="/admin_student/edit_student/{{ student.studentId }}" class="btn btn-warning">Edit Student</a>
+
+        <!-- Student Details Card -->
+        <div class="details-card">
+            <div class="details-header">
+                <h3>{{ student.studentName }}</h3>
+                <a href="{{ url_for('edit_student', student_id=student.studentId) }}" class="edit-button">Edit Student</a> {# Ensure route exists #}
             </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <table class="table table-bordered">
+            <div class="details-body">
+                <div class="details-grid">
+                    <!-- Left Column -->
+                    <div>
+                        <table class="details-table">
                             <tr>
-                                <th style="width: 40%">Student ID</th>
+                                <th>Student ID</th>
                                 <td>{{ student.studentId }}</td>
                             </tr>
                             <tr>
@@ -38,14 +186,15 @@
                             </tr>
                             <tr>
                                 <th>Date of Birth</th>
-                                <td>{{ student.dob }}</td>
+                                <td>{{ student.dob }}</td> {# Assuming dob is already formatted #}
                             </tr>
                         </table>
                     </div>
-                    <div class="col-md-6">
-                        <table class="table table-bordered">
+                    <!-- Right Column -->
+                    <div>
+                        <table class="details-table">
                             <tr>
-                                <th style="width: 40%">Degree</th>
+                                <th>Degree</th>
                                 <td>{{ student.degreeName }} ({{ student.ugPgType }})</td>
                             </tr>
                             <tr>
@@ -54,29 +203,57 @@
                             </tr>
                             <tr>
                                 <th>Date of Joining</th>
-                                <td>{{ student.dateOfJoining }}</td>
+                                <td>{{ student.dateOfJoining }}</td> {# Assuming dateOfJoining is already formatted #}
                             </tr>
                             <tr>
                                 <th>Graduation Status</th>
                                 <td>
-                                    <span class="badge {% if student.graduationStatus == 'Graduated' %}bg-success{% elif student.graduationStatus == 'In Progress' %}bg-primary{% elif student.graduationStatus == 'Discontinued' %}bg-danger{% else %}bg-warning{% endif %}">
+                                    {# Apply specific class based on status #}
+                                    <span class="status-badge
+                                        {% if student.graduationStatus == 'Graduated' %}status-graduated
+                                        {% elif student.graduationStatus == 'In Progress' %}status-in-progress
+                                        {% elif student.graduationStatus == 'Discontinued' %}status-discontinued
+                                        {% elif student.graduationStatus == 'Max years exceeded' %}status-max-years
+                                        {% else %}status-other
+                                        {% endif %}">
                                         {{ student.graduationStatus }}
                                     </span>
                                 </td>
                             </tr>
-                            {% if student.dateOfGraduation and student.dateOfGraduation != 'N/A' %}
+                            {# Conditionally display graduation date #}
+                            {% if student.dateOfGraduation and student.dateOfGraduation != 'N/A' %} {# Check if value exists and is not 'N/A' #}
                             <tr>
                                 <th>Date of Graduation</th>
-                                <td>{{ student.dateOfGraduation }}</td>
+                                <td>{{ student.dateOfGraduation }}</td> {# Assuming dateOfGraduation is formatted #}
                             </tr>
                             {% endif %}
                         </table>
                     </div>
-                </div>
-            </div>
-        </div>
+                </div> <!-- End details-grid -->
+            </div> <!-- End details-body -->
+        </div> <!-- End details-card -->
+
+        <!-- Optional Back Button -->
+         <div>
+             <a href="{{ url_for('view_all_students') or '#' }}" class="back-button">Back to All Students</a>
+         </div>
+
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <!-- JavaScript for Dropdown -->
+    <script>
+        // Ensure dropdown JS doesn't conflict if header structure changed significantly
+        const dropdownBtn = document.querySelector('.dropdown-btn');
+        const dropdownContent = document.querySelector('.dropdown-content');
+        if (dropdownBtn && dropdownContent) {
+            dropdownBtn.addEventListener('click', () => dropdownContent.classList.toggle('show'));
+            window.addEventListener('click', (event) => {
+                if (!event.target.matches('.dropdown-btn, .dropdown-arrow, .profile-avatar')) {
+                    if (dropdownContent.classList.contains('show')) dropdownContent.classList.remove('show');
+                }
+            });
+        }
+    </script>
 </body>
+
 </html>

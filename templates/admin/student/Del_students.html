@@ -1,28 +1,173 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
-    <title>Delete Student</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='./css/admin/style2.css') }}">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Delete Student</title> <!-- Changed title for clarity -->
+    <!-- Link to the base style sheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin/style.css') }}" />
+    <!-- Add specific styles for this page -->
+    <style>
+        /* Define CSS variables if not globally available */
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --danger-color: #dc3545; /* Red for delete */
+            --danger-hover-color: #c82333; /* Darker red */
+            --light-bg-color: #f8f9fa;
+            --border-color: #dee2e6;
+            --text-color: #212529;
+            --text-muted-color: #6c757d;
+            --section-bg-color: #ffffff;
+            --box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            --border-radius: 0.3rem;
+        }
+
+        /* Basic styles for form elements */
+        .delete-form { /* Specific class for this form */
+            margin-top: 1.5rem;
+            padding: 2rem;
+            background-color: var(--section-bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            max-width: 500px; /* Constrain form width */
+            margin-left: auto; /* Center form (optional) */
+            margin-right: auto;
+        }
+        .form-group {
+            margin-bottom: 1.5rem; /* Increased spacing */
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+            color: var(--text-color);
+        }
+        .form-group input[type="number"] {
+            width: 100%;
+            padding: 0.6rem 0.8rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            box-sizing: border-box;
+            font-size: 1em;
+        }
+        .form-group input[type="number"]:focus {
+             border-color: var(--primary-color); /* Highlight focus */
+             outline: none;
+             box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+        }
+
+         .form-group button.delete-button { /* Specific class for delete button */
+             padding: 0.7rem 1.5rem;
+             background-color: var(--danger-color);
+             color: white;
+             border: none;
+             border-radius: var(--border-radius);
+             cursor: pointer;
+             font-size: 1em;
+             font-weight: 500;
+             transition: background-color 0.2s ease;
+             width: 100%; /* Make button full width */
+         }
+         .form-group button.delete-button:hover {
+            background-color: var(--danger-hover-color);
+         }
+
+        /* Warning Text */
+        .delete-warning {
+            margin-top: 1rem;
+            font-size: 0.9em;
+            color: var(--text-muted-color);
+            text-align: center; /* Center the warning */
+        }
+
+        /* Message Styling */
+        .message { padding: 1rem; margin-bottom: 1.5rem; border: 1px solid transparent; border-radius: var(--border-radius); display: flex; align-items: center; }
+        .message.info { background-color: #e7f3fe; border-color: #d0e3f0; color: #0c5460; }
+        .message.warning { background-color: #fff3cd; border-color: #ffeeba; color: #856404; }
+        .message.danger, .message.error { background-color: #f8d7da; border-color: #f5c6cb; color: #721c24;}
+        .message.success { background-color: #d4edda; border-color: #c3e6cb; color: #155724;}
+
+        /* Back Button Styling */
+         .back-button { display: inline-block; margin-top: 2rem; padding: 0.6rem 1.2rem; background-color: var(--secondary-color); color: white; text-decoration: none; border-radius: var(--border-radius); transition: background-color 0.2s ease; }
+         .back-button:hover { background-color: #5a6268; color: white; }
+
+    </style>
 </head>
+
 <body>
+    <header>
+        <h1>Delete Student</h1> <!-- Updated header title -->
+        <div class="user-dropdown">
+            <button class="dropdown-btn">
+                <div class="profile-avatar">👤</div>
+                <span class="dropdown-arrow">▼</span>
+            </button>
+            <div class="dropdown-content">
+                <a href="{{ url_for('logout') }}" class="logout-option">
+                    <div class="icon">🚪</div>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
     <div class="container">
-        <h1>Delete Student</h1>
-        
+
+        <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }}">{{ message }}</div>
-                {% endfor %}
+                 <div>
+                 {% for category, message in messages %}
+                    <div class="message {{ category or 'info' }}">{{ message }}</div>
+                 {% endfor %}
+                 </div>
             {% endif %}
         {% endwith %}
 
-        <form method="POST">
+        <!-- Delete Student Form -->
+        <form method="POST" class="delete-form">
+             <!-- Note: The procedure now updates status, but the page title remains "Delete Student" for consistency -->
+             <!-- The button text could be changed to "Mark as Discontinued" if preferred -->
             <div class="form-group">
-                <label for="student_id">Student ID:</label>
-                <input type="number" id="student_id" name="student_id" required>
+                <label for="student_id">Student ID to Mark as Discontinued:</label>
+                <input type="number" id="student_id" name="student_id" required min="2000000" placeholder="Enter Student ID">
             </div>
-            <button type="submit" class="danger">Delete Student</button>
+
+            <div class="form-group">
+                <button type="submit" class="delete-button">Mark as Discontinued</button> <!-- Updated Button Text -->
+                 <p class="delete-warning">
+                    This action will change the student's status to 'Discontinued' and remove their login access.
+                 </p>
+            </div>
         </form>
+
     </div>
+
+    <!-- JavaScript for Dropdown -->
+    <script>
+        // Ensure dropdown JS doesn't conflict if header structure changed significantly
+        const dropdownBtn = document.querySelector('.dropdown-btn');
+        const dropdownContent = document.querySelector('.dropdown-content');
+
+        if (dropdownBtn && dropdownContent) {
+            dropdownBtn.addEventListener('click', function () {
+                dropdownContent.classList.toggle('show');
+            });
+
+            window.addEventListener('click', function (event) {
+                if (!event.target.matches('.dropdown-btn') &&
+                    !event.target.matches('.dropdown-arrow') &&
+                    !event.target.matches('.profile-avatar')) {
+                    if (dropdownContent.classList.contains('show')) {
+                        dropdownContent.classList.remove('show');
+                    }
+                }
+            });
+        }
+    </script>
 </body>
+
 </html>

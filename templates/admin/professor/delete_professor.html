@@ -1,47 +1,183 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Delete Professor</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
-</head>
-<body>
-    <div class="container mt-5">
-        <h1>Delete Professor</h1>
 
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mark Professor as Departed</title>
+    <!-- Link to the base style sheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin/style.css') }}" />
+    <!-- Add specific styles for this page -->
+    <style>
+        /* Define CSS variables if not globally available */
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --secondary-hover-color: #5a6268;
+            --danger-color: #dc3545; /* Red for delete/depart action */
+            --danger-hover-color: #c82333; /* Darker red */
+            --warning-color: #ffc107;
+            --light-bg-color: #f8f9fa;
+            --border-color: #dee2e6;
+            --text-color: #212529;
+            --text-muted-color: #6c757d;
+            --section-bg-color: #ffffff;
+            --box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            --border-radius: 0.3rem;
+        }
+
+        /* Basic styles for form elements */
+        .action-form { /* Generic class for action forms */
+            margin-top: 1.5rem;
+            padding: 2rem;
+            background-color: var(--section-bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            max-width: 500px; /* Constrain form width */
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+            color: var(--text-color);
+        }
+        .form-group input[type="number"] {
+            width: 100%;
+            padding: 0.6rem 0.8rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            box-sizing: border-box;
+            font-size: 1em;
+        }
+        .form-group input[type="number"]:focus {
+             border-color: var(--primary-color);
+             outline: none;
+             box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+        }
+        .form-group small.input-info { /* Helper text below input */
+            font-size: 0.85em;
+            color: var(--text-muted-color);
+            display: block;
+            margin-top: 0.3rem;
+        }
+
+         .action-button { /* Generic action button class */
+             padding: 0.7rem 1.5rem;
+             color: white;
+             border: none;
+             border-radius: var(--border-radius);
+             cursor: pointer;
+             font-size: 1em;
+             font-weight: 500;
+             transition: background-color 0.2s ease;
+             width: 100%; /* Make button full width */
+         }
+         .danger-button { /* Specific class for danger actions */
+            background-color: var(--danger-color);
+         }
+         .danger-button:hover {
+            background-color: var(--danger-hover-color);
+         }
+
+
+        /* Warning Text */
+        .action-warning {
+            margin-top: 1rem;
+            font-size: 0.9em;
+            color: var(--warning-color); /* Use warning color */
+            font-weight: 500; /* Make it slightly bolder */
+            text-align: center;
+        }
+
+        /* Message Styling */
+        .message { padding: 1rem; margin-bottom: 1.5rem; border: 1px solid transparent; border-radius: var(--border-radius); display: flex; align-items: center; }
+        .message.info { background-color: #e7f3fe; border-color: #d0e3f0; color: #0c5460; }
+        .message.warning { background-color: #fff3cd; border-color: #ffeeba; color: #856404; }
+        .message.danger, .message.error { background-color: #f8d7da; border-color: #f5c6cb; color: #721c24;}
+        .message.success { background-color: #d4edda; border-color: #c3e6cb; color: #155724;}
+
+        /* Back Button Styling */
+         .back-button { display: inline-block; margin-top: 2rem; padding: 0.6rem 1.2rem; background-color: var(--secondary-color); color: white; text-decoration: none; border-radius: var(--border-radius); transition: background-color 0.2s ease; }
+         .back-button:hover { background-color: var(--secondary-hover-color); color: white; }
+
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Mark Professor as Departed</h1>
+        <div class="user-dropdown">
+            <button class="dropdown-btn">
+                <div class="profile-avatar">👤</div>
+                <span class="dropdown-arrow">▼</span>
+            </button>
+            <div class="dropdown-content">
+                <a href="{{ url_for('logout') }}" class="logout-option">
+                    <div class="icon">🚪</div>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+
+        <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                 <div class="mt-3">
+                 <div>
                  {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
+                    {# The 'danger' category will be used for the HOD error #}
+                    <div class="message {{ category or 'info' }}">{{ message }}</div>
                  {% endfor %}
                  </div>
             {% endif %}
         {% endwith %}
 
-        <form method="POST" action="{{ url_for('del_prof') }}" class="mt-4">
-            <div class="mb-3">
-                <label for="professor_id" class="form-label">Professor ID to Delete</label>
-                <input type="number" class="form-control" id="professor_id" name="professor_id" required min="10001" placeholder="Enter Professor ID">
-                <small class="form-text text-muted">Enter the exact ID of the professor you wish to delete.</small>
+        <!-- Mark Departed Form -->
+        <form method="POST" action="{{ url_for('del_prof') }}" class="action-form">
+            <div class="form-group">
+                <label for="professor_id">Professor ID to Mark as Departed:</label>
+                {# --- Added value attribute here --- #}
+                <input type="number" id="professor_id" name="professor_id" required min="10001" placeholder="Enter Professor ID" value="{{ professor_id or '' }}">
+                <small class="input-info">Enter the exact ID of the professor.</small>
             </div>
 
-            <button type="submit" class="btn btn-danger">Delete Professor</button>
-            <small class="d-block mt-2 text-warning">Warning: Deletion is permanent and cannot be undone. Associated login credentials will also be removed.</small>
+            <div class="form-group">
+                <button type="submit" class="action-button danger-button">Mark as Departed</button>
+                 <p class="action-warning">
+                    Warning: This will update the professor's status and remove login access. This cannot be easily undone. Check if they are HOD first.
+                 </p>
+            </div>
         </form>
 
-        <!-- Optional: Add a link back to a professor list or admin dashboard -->
-        <div class="mt-4">
-            <a href="{{ url_for('admin_dashboard') or '#' }}" class="btn btn-secondary">Back to Dashboard</a>
-            <!-- Replace 'admin_dashboard' with your actual dashboard route -->
-        </div>
+        <!-- Link back to a dashboard or list -->
+         <div>
+             <a href="{{ url_for('admin_dashboard') or '#' }}" class="back-button">Back to Dashboard</a>
+         </div>
 
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <!-- JavaScript for Dropdown -->
+    <script>
+        // Ensure dropdown JS doesn't conflict
+        const dropdownBtn = document.querySelector('.dropdown-btn');
+        const dropdownContent = document.querySelector('.dropdown-content');
+        if (dropdownBtn && dropdownContent) {
+            dropdownBtn.addEventListener('click', () => dropdownContent.classList.toggle('show'));
+            window.addEventListener('click', (event) => {
+                if (!event.target.matches('.dropdown-btn, .dropdown-arrow, .profile-avatar')) {
+                    if (dropdownContent.classList.contains('show')) dropdownContent.classList.remove('show');
+                }
+            });
+        }
+    </script>
 </body>
+
 </html>

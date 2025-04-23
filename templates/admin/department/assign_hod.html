@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Add New Degree</title>
+    <title>Assign Head of Department</title>
     <!-- Link to the base style sheet -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/admin/style.css') }}" />
     <!-- Add specific styles for this page -->
@@ -29,7 +29,7 @@
         }
 
         /* Basic styles for form elements */
-        .add-degree-form {
+        .assign-hod-form {
             margin-top: 1.5rem;
             padding: 2rem;
             background-color: var(--section-bg-color);
@@ -41,7 +41,7 @@
             margin-right: auto;
         }
         .form-group {
-            margin-bottom: 1.2rem; /* Consistent spacing */
+            margin-bottom: 1.5rem; /* Consistent spacing */
         }
         .form-group label {
             display: block;
@@ -49,8 +49,6 @@
             font-weight: bold;
             color: var(--text-color);
         }
-        .form-group input[type="text"],
-        .form-group input[type="number"],
         .form-group select {
             width: 100%;
             padding: 0.6rem 0.8rem;
@@ -58,28 +56,21 @@
             border-radius: var(--border-radius);
             box-sizing: border-box;
             font-size: 1em;
-        }
-         .form-group select {
             appearance: none;
             background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23007bff%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
             background-repeat: no-repeat;
             background-position: right 0.7em top 50%;
             background-size: 0.65em auto;
+        }
+         .form-group select:disabled {
+             background-color: #e9ecef; /* Disabled background */
+             cursor: not-allowed;
          }
-
-         .form-group input:focus,
          .form-group select:focus {
              border-color: var(--primary-color);
              outline: none;
              box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
          }
-
-        .form-group small.input-info { /* Helper text */
-            font-size: 0.85em;
-            color: var(--text-muted-color);
-            display: block;
-            margin-top: 0.3rem;
-        }
 
         /* Submit Button */
          .submit-button {
@@ -98,6 +89,10 @@
          .submit-button:hover {
             background-color: var(--primary-hover-color);
          }
+          .submit-button:disabled {
+              background-color: #ccc;
+              cursor: not-allowed;
+          }
 
         /* Message Styling */
         .message { padding: 1rem; margin-bottom: 1.5rem; border: 1px solid transparent; border-radius: var(--border-radius); display: flex; align-items: center; }
@@ -110,12 +105,17 @@
          .back-button { display: inline-block; margin-top: 2rem; padding: 0.6rem 1.2rem; background-color: var(--secondary-color); color: white; text-decoration: none; border-radius: var(--border-radius); transition: background-color 0.2s ease; }
          .back-button:hover { background-color: var(--secondary-hover-color); color: white; }
 
+         /* Hide options in professor dropdown */
+        #professor_id option.hidden-prof {
+            display: none;
+        }
+
     </style>
 </head>
 
 <body>
     <header>
-        <h1>Add New Degree</h1>
+        <h1>Assign Head of Department</h1>
         <div class="user-dropdown">
             <button class="dropdown-btn">
                 <div class="profile-avatar">👤</div>
@@ -143,40 +143,40 @@
             {% endif %}
         {% endwith %}
 
-        <!-- Add Degree Form -->
-        <form method="POST" action="{{ url_for('add_degree') }}" class="add-degree-form">
+        <!-- Assign HOD Form -->
+        <form method="POST" action="{{ url_for('assign_hod_route') }}" class="assign-hod-form">
             <div class="form-group">
-                <label for="degree_name">Degree Name</label>
-                <input type="text" id="degree_name" name="degree_name" required placeholder="e.g., B.Sc. Physics, M.Eng. Software">
-            </div>
-
-            <div class="form-group">
-                <label for="ug_pg_type">Degree Type</label>
-                <select id="ug_pg_type" name="ug_pg_type" required>
-                    <option value="" disabled selected>-- Select Type --</option>
-                    <option value="UG">Undergraduate (UG)</option>
-                    <option value="PG">Postgraduate (PG)</option>
+                <label for="department_id">Select Department:</label>
+                <select id="department_id" name="department_id" required>
+                    <option value="" disabled {% if not selected_department_id %}selected{% endif %}>-- Select Department --</option>
+                    {% for dept in departments %}
+                        <option value="{{ dept.departmentId }}" data-current-hod="{{ dept.headOfDeptId or '' }}" {% if selected_department_id and dept.departmentId == selected_department_id|int %}selected{% endif %}>
+                            {{ dept.deptName }} {% if dept.headOfDeptId %}(Current HOD ID: {{ dept.headOfDeptId }}){% else %}(No HOD assigned){% endif %}
+                        </option>
+                    {% else %}
+                         <option value="" disabled>No departments found</option>
+                    {% endfor %}
                 </select>
             </div>
 
-             <div class="form-group">
-                <label for="max_years">Maximum Years</label>
-                <input type="number" id="max_years" name="max_years" required min="1" placeholder="e.g., 4 for B.Tech, 2 for M.Tech">
-            </div>
-
-             <div class="form-group">
-                <label for="total_credits">Total Credits Required</label>
-                <input type="number" id="total_credits" name="total_credits" required min="1" placeholder="Total credits for graduation">
-            </div>
-
             <div class="form-group">
-                <label for="core_credits">Core Credits Required</label>
-                <input type="number" id="core_credits" name="core_credits" required min="0" placeholder="Mandatory credits within the total">
-                 <small class="input-info">Must be less than or equal to Total Credits.</small>
+                <label for="professor_id">Select Professor (Must be Active and in selected Dept):</label>
+                <select id="professor_id" name="professor_id" required disabled> {# Initially disabled #}
+                    <option value="" disabled selected>-- Select Professor --</option>
+                    {% for prof in professors %}
+                        {# Add data attribute for filtering and hide options initially #}
+                        <option value="{{ prof.professorId }}" data-deptid="{{ prof.departmentId }}" class="hidden-prof">
+                            {{ prof.professorName }} (ID: {{ prof.professorId }})
+                        </option>
+                    {% else %}
+                        {# This option won't show if professors list is empty, handle in JS #}
+                    {% endfor %}
+                     <option value="" disabled class="no-profs-option" style="display: none;">No active professors in this department</option>
+                </select>
             </div>
 
             <div class="form-group"> <!-- Wrap button -->
-                 <button type="submit" class="submit-button">Add Degree</button>
+                 <button type="submit" class="submit-button" id="submitBtn" disabled>Assign Head of Department</button> {# Initially disabled #}
             </div>
         </form>
 
@@ -187,9 +187,9 @@
 
     </div>
 
-    <!-- JavaScript for Dropdown -->
+    <!-- JavaScript for Dropdown Filtering and Dropdown -->
     <script>
-        // Ensure dropdown JS doesn't conflict
+        // Dropdown JS
         const dropdownBtn = document.querySelector('.dropdown-btn');
         const dropdownContent = document.querySelector('.dropdown-content');
         if (dropdownBtn && dropdownContent) {
@@ -200,6 +200,84 @@
                 }
             });
         }
+
+        // Department/Professor Filtering JS
+        const deptSelect = document.getElementById('department_id');
+        const profSelect = document.getElementById('professor_id');
+        const submitBtn = document.getElementById('submitBtn');
+        const noProfsOption = profSelect.querySelector('.no-profs-option');
+
+        function filterProfessors() {
+            const selectedDeptId = deptSelect.value;
+            let currentHodId = '';
+            const selectedDeptOption = deptSelect.options[deptSelect.selectedIndex];
+            if (selectedDeptOption) {
+                 currentHodId = selectedDeptOption.getAttribute('data-current-hod');
+            }
+
+
+            let hasVisibleProf = false; // Flag to check if any profs are available
+
+            // Reset professor dropdown
+            profSelect.value = ''; // Reset selection
+            profSelect.disabled = true; // Keep disabled until check completes
+            submitBtn.disabled = true; // Disable submit until prof selected
+            noProfsOption.style.display = 'none'; // Hide 'no profs' message initially
+
+            if (!selectedDeptId) {
+                // If no department selected, hide all prof options
+                 profSelect.querySelectorAll('option[data-deptid]').forEach(option => {
+                    option.classList.add('hidden-prof');
+                 });
+                return; // Exit if no department selected
+            }
+
+            // Iterate through professor options
+            profSelect.querySelectorAll('option[data-deptid]').forEach(option => {
+                const profDeptId = option.getAttribute('data-deptid');
+                if (profDeptId === selectedDeptId) {
+                    option.classList.remove('hidden-prof'); // Show option
+                    hasVisibleProf = true;
+                     // Optionally pre-select if this prof is the current HOD
+                     // if (option.value === currentHodId) {
+                     //    option.selected = true;
+                     // }
+                } else {
+                    option.classList.add('hidden-prof'); // Hide option
+                    option.selected = false; // Deselect hidden options
+                }
+            });
+
+            // Enable or disable profSelect based on findings
+            if (hasVisibleProf) {
+                profSelect.disabled = false;
+                noProfsOption.style.display = 'none';
+            } else {
+                 profSelect.disabled = true;
+                 noProfsOption.style.display = 'block'; // Show 'no profs' message
+            }
+        }
+
+        // Enable submit button only when a valid professor is chosen
+        function toggleSubmitButton() {
+             if (profSelect.value && !profSelect.disabled) {
+                 submitBtn.disabled = false;
+             } else {
+                 submitBtn.disabled = true;
+             }
+        }
+
+        // Add event listeners
+        if(deptSelect && profSelect && submitBtn && noProfsOption) {
+            deptSelect.addEventListener('change', filterProfessors);
+            profSelect.addEventListener('change', toggleSubmitButton);
+
+            // Initial filter on page load (in case of re-render with selection)
+            filterProfessors();
+            // Initial check for submit button state
+            toggleSubmitButton();
+        }
+
     </script>
 </body>
 

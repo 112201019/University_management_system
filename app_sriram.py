@@ -64,8 +64,6 @@ engine = db.engine
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Replace with a secure key in production
 
-enroll_open = {'status': False}  # Shared mutable state
-
 @app.route('/')
 def home():
     return render_template('login.html')
@@ -128,12 +126,12 @@ def logout():
     session.clear()
     return redirect(url_for('home'))
 
-@app.route('/course_registration1', methods=['GET', 'POST'])
-def course_registration1():
-    if request.method == 'POST':
-        # Toggle the enrollment flag
-        enroll_open['status'] = not enroll_open['status']
-        return redirect(url_for('course_registration1'))
+# @app.route('/course_registration1', methods=['GET', 'POST'])
+# def course_registration1():
+#     if request.method == 'POST':
+#         # Toggle the enrollment flag
+#         enroll_open['status'] = not enroll_open['status']
+#         return redirect(url_for('course_registration1'))
     
     return render_template('./admin/course_registration/course_registration.html', enroll_status=enroll_open['status'])
 
@@ -143,7 +141,7 @@ def admin_student():
 
 @app.route('/admin_course', methods=['GET','POST'])
 def admin_course():
-    return render_template('./admin/courses/courses.html')
+    return render_template('./admin/courses/coursepage.html')
 
 @app.route('/admin_student/AorD_students', methods=['GET','POST'])
 def AorD_students():
@@ -755,32 +753,96 @@ def add_prof():
     return render_template('./admin/professor/add_professor.html', departments=departments)
 
 
+# @app.route('/admin_professor/del_professor', methods=['GET', 'POST'])
+# def del_prof():
+#     if request.method == 'POST':
+#         try:
+#             p_professor_id = request.form['professor_id']
+
+#             if not p_professor_id:
+#                  flash('Professor ID is required.', 'warning')
+#                  return render_template('./admin/professor/delete_professor.html')
+
+#             # Call the stored procedure to delete the professor
+#             db.execute_ddl_and_dml_commands(
+#                 "CALL delete_professor(:p_professor_id)",
+#                 {'p_professor_id': int(p_professor_id)} # Ensure ID is an integer
+#             )
+
+#             flash(f'Professor with ID {p_professor_id} deleted successfully!', 'success')
+#             return redirect(url_for('del_prof')) # Redirect to the same page (or a professor list page)
+
+#         except Exception as e:
+#             # Catch potential errors, including the EXCEPTION raised by the procedure
+#             flash(f'Error deleting professor: {str(e)}', 'error')
+#             # Optionally, log the error: app.logger.error(f"Error deleting professor: {e}")
+
+#     # For GET request, just render the form
+#     return render_template('./admin/professor/delete_professor.html')
+
+
 @app.route('/admin_professor/del_professor', methods=['GET', 'POST'])
 def del_prof():
+    professor_id_to_render = None # Initialize for GET request
     if request.method == 'POST':
+        p_professor_id_str = request.form.get('professor_id')
+        professor_id_to_render = p_professor_id_str
+
         try:
-            p_professor_id = request.form['professor_id']
-
-            if not p_professor_id:
+            # 1. Validate Input Presence
+            if not p_professor_id_str:
                  flash('Professor ID is required.', 'warning')
-                 return render_template('./admin/professor/delete_professor.html')
+                 return render_template('./admin/professor/delete_professor.html', professor_id=professor_id_to_render)
 
-            # Call the stored procedure to delete the professor
+            # 2. Validate Input Format (Integer)
+            try:
+                p_professor_id = int(p_professor_id_str)
+            except ValueError:
+                 flash('Invalid Professor ID format. Please enter a number.', 'danger')
+                 return render_template('./admin/professor/delete_professor.html', professor_id=professor_id_to_render)
+
+            # 3. Check if the professor is a Head of Department (HOD) directly
+            hod_check_query = """
+            SELECT EXISTS (
+                SELECT 1
+                FROM Department
+                WHERE headOfDeptId = :p_professor_id
+            );
+            """
+            # Assuming your db wrapper can execute this and return a boolean scalar
+            # Adjust .scalar() based on your specific database library (e.g., .fetchone()[0])
+            is_head = db.execute_dql_commands(hod_check_query, {'p_professor_id': p_professor_id}).scalar()
+
+            # 4. If they are an HOD, flash error and stop
+            if is_head:
+                hod_error_text = f'Cannot mark professor {p_professor_id} as departed. They are currently assigned as a department head.'
+                flash(hod_error_text, 'danger')
+                # Re-render the form with the error and the entered ID
+                return render_template('./admin/professor/delete_professor.html', professor_id=professor_id_to_render)
+
+            # 5. If NOT an HOD, proceed to call the procedure to mark as departed
+            # (The procedure itself might still raise other errors, but not the HOD one)
             db.execute_ddl_and_dml_commands(
                 "CALL delete_professor(:p_professor_id)",
-                {'p_professor_id': int(p_professor_id)} # Ensure ID is an integer
+                {'p_professor_id': p_professor_id}
             )
 
-            flash(f'Professor with ID {p_professor_id} deleted successfully!', 'success')
-            return redirect(url_for('del_prof')) # Redirect to the same page (or a professor list page)
+            # 6. Success
+            flash(f'Professor with ID {p_professor_id} marked as departed successfully!', 'success')
+            return redirect(url_for('del_prof')) # Redirect on success
 
+        # 7. Catch other potential exceptions (e.g., database connection errors,
+        #    errors from the procedure *other* than the HOD check if any exist)
         except Exception as e:
-            # Catch potential errors, including the EXCEPTION raised by the procedure
-            flash(f'Error deleting professor: {str(e)}', 'error')
-            # Optionally, log the error: app.logger.error(f"Error deleting professor: {e}")
+            app.logger.error(f"Error processing professor {p_professor_id_str}: {e}")
+            flash(f'An unexpected error occurred: {str(e)}', 'danger')
+            # Re-render form even on unexpected errors
+            return render_template('./admin/professor/delete_professor.html', professor_id=professor_id_to_render)
 
     # For GET request, just render the form
-    return render_template('./admin/professor/delete_professor.html')
+    return render_template('./admin/professor/delete_professor.html', professor_id=professor_id_to_render)
+
+
 
 
 @app.route('/admin_department/add_department', methods=['GET', 'POST'])
@@ -927,12 +989,239 @@ def view_courses_by_term():
 
 
     return render_template(
-        'admin/courses/courses.html', # Adjust path as needed
+        'admin/courses/view_course_offerings.html', # Adjust path as needed
         terms=terms,
         offerings=offerings,
         selected_term_id=selected_term_id,
         selected_term_name=selected_term_name
     )
+registration_status = {
+    'student_enrollment': False,
+    'professor_approval': False
+}
 
+@app.route('/course_registration_control', methods=['GET', 'POST'])
+def course_registration_control():
+    global registration_status # Use the global dictionary
+
+    if request.method == 'POST':
+        action = request.form.get('action') # Get which button was pressed
+
+        if action == 'toggle_student':
+            if registration_status['student_enrollment']:
+                # Closing student enrollment - always allowed
+                registration_status['student_enrollment'] = False
+                flash('Student enrollment window CLOSED.', 'info')
+            else:
+                # Attempting to open student enrollment
+                # RULE: Can only open if professor approval is CLOSED
+                if not registration_status['professor_approval']:
+                    registration_status['student_enrollment'] = True
+                    # No need to explicitly close prof approval, as it's already checked to be false
+                    flash('Student enrollment window OPENED.', 'info')
+                else:
+                    # This case should ideally be prevented by disabling the button in HTML,
+                    # but handle it defensively.
+                    flash('Cannot open student enrollment while professor approval is active.', 'danger')
+
+        elif action == 'toggle_prof':
+            if registration_status['professor_approval']:
+                # Closing professor approval - always allowed
+                registration_status['professor_approval'] = False
+                flash('Professor approval window CLOSED.', 'info')
+            else:
+                # Attempting to open professor approval
+                # RULE: Can only open if student enrollment is CLOSED
+                if not registration_status['student_enrollment']:
+                    registration_status['professor_approval'] = True
+                     # No need to explicitly close student enrollment, as it's already checked to be false
+                    flash('Professor approval window OPENED.', 'info')
+                else:
+                    # This case should ideally be prevented by disabling the button in HTML,
+                    # but handle it defensively.
+                    flash('Cannot open professor approval while student enrollment is active.', 'danger')
+
+        return redirect(url_for('course_registration_control')) # Redirect to refresh view
+
+    # For GET request, pass the current statuses to the template
+    return render_template(
+        './admin/course_registration/course_registration.html',
+        student_status=registration_status['student_enrollment'],
+        prof_status=registration_status['professor_approval']
+    )
+@app.route('/add_courses', methods=['GET', 'POST'])
+def add_courses():
+    departments = []
+    try:
+        # Fetch departments for the dropdown
+        dept_result = db.execute_dql_commands(
+            "SELECT departmentId, deptName FROM Department ORDER BY deptName"
+        ).fetchall()
+        departments = [{"departmentId": row[0], "deptName": row[1]} for row in dept_result]
+    except Exception as e:
+        flash(f'Error fetching departments: {str(e)}', 'error')
+        # Optionally log the error: app.logger.error(f"Error fetching departments: {e}")
+
+    if request.method == 'POST':
+        try:
+            # Get form data
+            course_data = {
+                'p_courseName': request.form.get('course_name'),
+                'p_departmentId': request.form.get('department_id'),
+                'p_typeOfCourse': request.form.get('ug_pg_type'), # UG/PG
+                'p_courseType': request.form.get('course_type'),   # Theory/Lab
+                'p_credits': request.form.get('credits')
+            }
+
+            # Basic Server-side Validation
+            if not all(course_data.values()):
+                flash('All fields are required.', 'warning')
+                return render_template('admin/courses/add_courses.html', departments=departments)
+
+            if course_data['p_typeOfCourse'] not in ('UG', 'PG'):
+                 flash('Invalid Course Level (UG/PG) selected.', 'warning')
+                 return render_template('admin/courses/add_courses.html', departments=departments)
+
+            if course_data['p_courseType'] not in ('Theory', 'Lab'):
+                 flash('Invalid Course Type (Theory/Lab) selected.', 'warning')
+                 return render_template('admin/courses/add_courses.html', departments=departments)
+
+            # Convert numeric fields after checking existence
+            try:
+                course_data['p_departmentId'] = int(course_data['p_departmentId'])
+                course_data['p_credits'] = int(course_data['p_credits'])
+            except ValueError:
+                 flash('Invalid number format for Department ID or Credits.', 'error')
+                 return render_template('admin/courses/add_course.html', departments=departments)
+
+            # Check credits range (though DB constraint also exists)
+            if not (0 < course_data['p_credits'] <= 5):
+                 flash('Credits must be between 1 and 5.', 'warning')
+                 return render_template('admin/courses/add_courses.html', departments=departments)
+
+
+            # Call the stored procedure to insert the course
+            db.execute_ddl_and_dml_commands(
+                """CALL insert_course(
+                        :p_courseName, :p_departmentId, :p_typeOfCourse,
+                        :p_courseType, :p_credits
+                   )""",
+                course_data
+            )
+
+            flash(f'Course "{course_data["p_courseName"]}" added successfully!', 'success')
+            return redirect(url_for('add_courses')) # Redirect to clear form
+
+        except Exception as e:
+            flash(f'Error adding course: {str(e)}', 'error')
+            # Optionally log the error: app.logger.error(f"Error adding course: {e}")
+            # Re-render form with departments if error occurs
+            return render_template('admin/courses/add_courses.html', departments=departments)
+
+
+    # For GET request, just render the form with departments
+    return render_template('./admin/courses/add_courses.html', departments=departments)
+# Ensure these imports are at the top (if not already present)
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+# Assuming 'db' is your database connection/wrapper object initialized elsewhere
+# from your_db_connector import db # Example import
+# Assuming 'app' is your Flask app instance initialized elsewhere
+# app = Flask(__name__)
+# app.secret_key = 'your secret key' # Make sure secret key is set
+
+@app.route('/admin_department/assign_hod', methods=['GET', 'POST'])
+def assign_hod_route():
+    departments = []
+    professors = []
+    selected_department_id = None # Keep track for re-rendering form on error
+
+    try:
+        # Fetch all departments for the first dropdown
+        dept_result = db.execute_dql_commands(
+            "SELECT departmentId, deptName, headOfDeptId FROM Department ORDER BY deptName"
+        ).fetchall()
+        # Include current HOD ID for display/logic
+        departments = [{"departmentId": row[0], "deptName": row[1], "headOfDeptId": row[2]} for row in dept_result]
+
+        # Fetch all ACTIVE professors for the second dropdown (initially unfiltered)
+        prof_result = db.execute_dql_commands(
+            """SELECT professorId, professorName, departmentId
+               FROM Professors
+               WHERE WorkingStatus = 'Active' ORDER BY professorName"""
+        ).fetchall()
+        professors = [{"professorId": row[0], "professorName": row[1], "departmentId": row[2]} for row in prof_result]
+
+    except Exception as e:
+        flash(f'Error fetching initial data: {str(e)}', 'error')
+        # Log error
+        app.logger.error(f"Error fetching data for assign HOD: {e}")
+        # Ensure lists are empty to avoid template errors
+        departments = []
+        professors = []
+
+    if request.method == 'POST':
+        try:
+            dept_id_str = request.form.get('department_id')
+            prof_id_str = request.form.get('professor_id')
+            selected_department_id = dept_id_str # Store for potential re-render
+
+            # --- Server-side Validation ---
+            if not dept_id_str or not prof_id_str:
+                flash('Both Department and Professor must be selected.', 'warning')
+                return render_template('./admin/department/assign_hod.html',
+                                       departments=departments, professors=professors,
+                                       selected_department_id=selected_department_id)
+
+            try:
+                p_departmentId = int(dept_id_str)
+                p_professorId = int(prof_id_str)
+            except ValueError:
+                flash('Invalid Department or Professor ID.', 'danger')
+                return render_template('./admin/department/assign_hod.html',
+                                       departments=departments, professors=professors,
+                                       selected_department_id=selected_department_id)
+
+            # Optional but recommended: Re-verify professor belongs to the department on server side
+            # (Although the procedure does this, catching it here is cleaner)
+            selected_prof = next((p for p in professors if p['professorId'] == p_professorId), None)
+            if not selected_prof or selected_prof['departmentId'] != p_departmentId:
+                 flash(f'Selected Professor does not belong to the selected Department or is inactive.', 'danger')
+                 return render_template('./admin/department/assign_hod.html',
+                                        departments=departments, professors=professors,
+                                        selected_department_id=selected_department_id)
+            # --- End Validation ---
+
+
+            # Call the stored procedure
+            db.execute_ddl_and_dml_commands(
+                "CALL assign_hod(:p_departmentId, :p_professorId)",
+                {'p_departmentId': p_departmentId, 'p_professorId': p_professorId}
+            )
+
+            # Find names for success message
+            dept_name = next((d['deptName'] for d in departments if d['departmentId'] == p_departmentId), 'Unknown Dept')
+            prof_name = selected_prof['professorName'] if selected_prof else 'Unknown Prof'
+
+            flash(f'Successfully assigned {prof_name} as Head of {dept_name}!', 'success')
+            return redirect(url_for('assign_hod_route')) # Redirect to refresh data
+
+        except Exception as e:
+            # Catch errors from the procedure (like prof not active, etc.) or DB issues
+            flash(f'Error assigning Head of Department: {str(e)}', 'danger')
+            app.logger.error(f"Error calling assign_hod procedure: {e}")
+            # Re-render form with selected department to help user
+            return render_template('./admin/department/assign_hod.html',
+                                   departments=departments, professors=professors,
+                                   selected_department_id=selected_department_id)
+
+
+    # For GET request or if POST fails and re-renders
+    return render_template('./admin/department/assign_hod.html',
+                           departments=departments, professors=professors,
+                           selected_department_id=selected_department_id)
+
+@app.route('/admin/department', methods=['GET'])
+def dept():
+    return render_template('./admin/department/main_dept.html')
 if __name__ == '__main__':
     app.run(debug=True)

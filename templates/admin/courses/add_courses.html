@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Add New Course</title>
+    <!-- Link to the same style sheet as the dashboard example -->
+    <!-- Adjust the path if this HTML file is in a different directory depth -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin/style.css') }}" />
+    <!-- Add specific styles for this page if needed -->
+    <style>
+        /* Basic styles for form elements if not covered by style.css */
+        .add-course-form {
+            margin-top: 1rem;
+            padding: 20px;
+            background-color: #f9f9f9; /* Light background for form area */
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input[type="text"],
+        .form-group input[type="number"],
+        .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box; /* Include padding and border in element's total width and height */
+        }
+         .form-group button {
+             padding: 10px 15px;
+             background-color: #28a745; /* Green color */
+             color: white;
+             border: none;
+             border-radius: 4px;
+             cursor: pointer;
+             font-size: 1em;
+         }
+         .form-group button:hover {
+            background-color: #218838;
+         }
+
+        /* Style for messages if style.css doesn't cover them */
+        .message { padding: 10px; margin-bottom: 15px; border-radius: 4px; }
+        .message.info { background-color: #e7f3fe; border: 1px solid #d0e3f0; color: #31708f; }
+        .message.warning { background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; }
+        .message.error { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24;}
+        .message.success { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724;}
+
+        /* Ensure Back button fits in */
+         .back-link { display: inline-block; margin-top: 20px; padding: 8px 15px; background-color: #6c757d; color: white; text-decoration: none; border-radius: 4px; }
+         .back-link:hover { background-color: #5a6268; }
+
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Add New Course</h1> <!-- Updated Title -->
+        <div class="user-dropdown">
+            <button class="dropdown-btn">
+                <div class="profile-avatar">👤</div>
+                <span class="dropdown-arrow">▼</span>
+            </button>
+            <div class="dropdown-content">
+                <a href="{{ url_for('logout') }}" class="logout-option">
+                    <div class="icon">🚪</div>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                 <div>
+                 {% for category, message in messages %}
+                    <!-- Use generic message classes unless style.css defines alert classes -->
+                    <div class="message {{ category or 'info' }}">{{ message }}</div>
+                 {% endfor %}
+                 </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Add Course Form -->
+        <form method="POST" action="{{ url_for('add_courses') }}" class="add-course-form">
+            <div class="form-group">
+                <label for="course_name">Course Name:</label>
+                <input type="text" id="course_name" name="course_name" required>
+            </div>
+
+            <div class="form-group">
+                <label for="department_id">Department:</label>
+                <select id="department_id" name="department_id" required>
+                    <option value="" disabled selected>-- Select Department --</option>
+                    {% for dept in departments %}
+                        <option value="{{ dept.departmentId }}">{{ dept.deptName }}</option>
+                    {% else %}
+                         <option value="" disabled>No departments found</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+             <div class="form-group">
+                <label for="ug_pg_type">Level (UG/PG):</label>
+                <select id="ug_pg_type" name="ug_pg_type" required>
+                    <option value="" disabled selected>-- Select Level --</option>
+                    <option value="UG">Undergraduate (UG)</option>
+                    <option value="PG">Postgraduate (PG)</option>
+                </select>
+            </div>
+
+             <div class="form-group">
+                <label for="course_type">Type (Theory/Lab):</label>
+                <select id="course_type" name="course_type" required>
+                    <option value="" disabled selected>-- Select Type --</option>
+                    <option value="Theory">Theory</option>
+                    <option value="Lab">Lab</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="credits">Credits:</label>
+                <input type="number" id="credits" name="credits" required min="1" max="5" placeholder="1-5">
+            </div>
+
+            <div class="form-group">
+                <button type="submit">Add Course</button>
+            </div>
+        </form>
+
+
+         <!-- Link back to a dashboard or list -->
+         <div>
+             <a href="{{ url_for('admin_dashboard') or '#' }}" class="back-link">Back to Dashboard</a>
+             <!-- Replace 'admin_dashboard' with your actual dashboard route name -->
+         </div>
+
+    </div>
+
+    <!-- JavaScript for Dropdown (same as dashboard example) -->
+    <script>
+        document.querySelector('.dropdown-btn').addEventListener('click', function () {
+            document.querySelector('.dropdown-content').classList.toggle('show');
+        });
+        window.addEventListener('click', function (event) {
+            if (!event.target.matches('.dropdown-btn') &&
+                !event.target.matches('.dropdown-arrow') &&
+                !event.target.matches('.profile-avatar')) {
+                const dropdown = document.querySelector('.dropdown-content');
+                if (dropdown && dropdown.classList.contains('show')) {
+                    dropdown.classList.remove('show');
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

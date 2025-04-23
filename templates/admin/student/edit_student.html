@@ -1,126 +1,331 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Student</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Edit Student - {{ student.studentName }}</title>
+    <!-- Link to the base style sheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin/style.css') }}" />
+    <!-- Add specific styles for this page -->
+    <style>
+        /* Define CSS variables if not globally available */
+        :root {
+            --primary-color: #007bff;
+            --primary-hover-color: #0056b3;
+            --secondary-color: #6c757d;
+            --secondary-hover-color: #5a6268;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --info-color: #17a2b8;
+            --light-bg-color: #f8f9fa;
+            --border-color: #dee2e6;
+            --text-color: #212529;
+            --text-muted-color: #6c757d;
+            --section-bg-color: #ffffff;
+            --box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            --border-radius: 0.3rem;
+        }
+
+        /* Basic styles for form elements */
+        .edit-student-form {
+            margin-top: 1.5rem;
+            padding: 2rem;
+            background-color: var(--section-bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+        }
+        .form-grid { /* Optional: Use grid for layout */
+             display: grid;
+             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* Responsive columns */
+             gap: 1.5rem; /* Space between columns */
+             margin-bottom: 1.5rem; /* Space before buttons */
+        }
+        .form-group {
+            margin-bottom: 1rem; /* Spacing within columns */
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+            color: var(--text-color);
+        }
+        .form-group input[type="text"],
+        .form-group input[type="date"],
+        .form-group select {
+            width: 100%;
+            padding: 0.6rem 0.8rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            box-sizing: border-box;
+            font-size: 1em;
+            background-color: #fff;
+            color: var(--text-color);
+        }
+        .form-group select {
+            appearance: none;
+            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23007bff%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
+            background-repeat: no-repeat;
+            background-position: right 0.7em top 50%;
+            background-size: 0.65em auto;
+        }
+         .form-group input:focus,
+         .form-group select:focus {
+             border-color: var(--primary-color);
+             outline: none;
+             box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+         }
+
+        /* Styling for graduation date info text */
+        .graduation-date-info {
+            font-size: 0.85em;
+            color: var(--text-muted-color);
+            margin-top: 0.3rem;
+        }
+
+        /* Button container */
+        .form-actions {
+            display: flex;
+            justify-content: space-between; /* Pushes buttons apart */
+            align-items: center;
+            margin-top: 1.5rem; /* Space above buttons */
+            padding-top: 1.5rem; /* Space from form fields */
+            border-top: 1px solid var(--border-color); /* Separator line */
+        }
+
+        /* General button styling */
+        .form-button {
+            padding: 0.7rem 1.5rem;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 500;
+            text-decoration: none; /* For link button */
+            text-align: center;
+            display: inline-block;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+        .save-button {
+             background-color: var(--primary-color);
+             color: white;
+        }
+        .save-button:hover {
+            background-color: var(--primary-hover-color);
+        }
+        .cancel-button {
+             background-color: var(--secondary-color);
+             color: white;
+        }
+        .cancel-button:hover {
+            background-color: var(--secondary-hover-color);
+            color: white; /* Ensure text stays white */
+        }
+
+        /* Message Styling */
+        .message { padding: 1rem; margin-bottom: 1.5rem; border: 1px solid transparent; border-radius: var(--border-radius); display: flex; align-items: center; }
+        .message.info { background-color: #e7f3fe; border-color: #d0e3f0; color: #0c5460; }
+        .message.warning { background-color: #fff3cd; border-color: #ffeeba; color: #856404; }
+        .message.danger, .message.error { background-color: #f8d7da; border-color: #f5c6cb; color: #721c24;}
+        .message.success { background-color: #d4edda; border-color: #c3e6cb; color: #155724;}
+
+        /* Breadcrumb Styling (Simple) */
+        .breadcrumbs {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 1rem 0; /* Space below breadcrumbs */
+            font-size: 0.9em;
+        }
+        .breadcrumbs li {
+            display: inline;
+            color: var(--text-muted-color);
+        }
+        .breadcrumbs li + li:before {
+            content: "/\00a0"; /* Separator */
+            padding: 0 5px;
+            color: var(--text-muted-color);
+        }
+        .breadcrumbs li a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+         .breadcrumbs li a:hover {
+             text-decoration: underline;
+         }
+
+    </style>
 </head>
+
 <body>
-    <div class="container mt-4">
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/admin_student/view_all_students">All Students</a></li>
-                <li class="breadcrumb-item"><a href="/admin_student/view_student/{{ student.studentId }}">Student Details</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Edit Student</li>
-            </ol>
-        </nav>
-        
-        <div class="card">
-            <div class="card-header">
-                <h3>Edit Student Information</h3>
-            </div>
-            <div class="card-body">
-                {% if error_message %}
-                <div class="alert alert-danger">{{ error_message }}</div>
-                {% endif %}
-                
-                <form method="POST" action="/admin_student/update_student/{{ student.studentId }}">
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="studentName" class="form-label">Full Name</label>
-                                <input type="text" class="form-control" id="studentName" name="studentName" value="{{ student.studentName }}" required>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="gender" class="form-label">Gender</label>
-                                <select class="form-select" id="gender" name="gender" required>
-                                    <option value="Male" {% if student.gender == 'Male' %}selected{% endif %}>Male</option>
-                                    <option value="Female" {% if student.gender == 'Female' %}selected{% endif %}>Female</option>
-                                    <option value="Other" {% if student.gender == 'Other' %}selected{% endif %}>Other</option>
-                                </select>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="dob" class="form-label">Date of Birth</label>
-                                <input type="date" class="form-control" id="dob" name="dob" value="{{ student.dob_raw }}" required>
-                            </div>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="degreeId" class="form-label">Degree</label>
-                                <select class="form-select" id="degreeId" name="degreeId" required>
-                                    {% for degree in degrees %}
-                                    <option value="{{ degree.degreeId }}" {% if student.degreeId == degree.degreeId %}selected{% endif %}>
-                                        {{ degree.degreeName }} ({{ degree.ugPgType }})
-                                    </option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="departmentId" class="form-label">Department</label>
-                                <select class="form-select" id="departmentId" name="departmentId" required>
-                                    {% for dept in departments %}
-                                    <option value="{{ dept.departmentId }}" {% if student.departmentId == dept.departmentId %}selected{% endif %}>
-                                        {{ dept.deptName }}
-                                    </option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="dateOfJoining" class="form-label">Date of Joining</label>
-                                <input type="date" class="form-control" id="dateOfJoining" name="dateOfJoining" value="{{ student.dateOfJoining_raw }}" required>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="graduationStatus" class="form-label">Graduation Status</label>
-                                <select class="form-select" id="graduationStatus" name="graduationStatus" required>
-                                    <option value="In Progress" {% if student.graduationStatus == 'In Progress' %}selected{% endif %}>In Progress</option>
-                                    <option value="Graduated" {% if student.graduationStatus == 'Graduated' %}selected{% endif %}>Graduated</option>
-                                    <option value="Discontinued" {% if student.graduationStatus == 'Discontinued' %}selected{% endif %}>Discontinued</option>
-                                    <option value="Max years exceeded" {% if student.graduationStatus == 'Max years exceeded' %}selected{% endif %}>Max years exceeded</option>
-                                </select>
-                            </div>
-                            
-                            <div class="mb-3" id="dateOfGraduationContainer">
-                                <label for="dateOfGraduation" class="form-label">Date of Graduation</label>
-                                <input type="date" class="form-control" id="dateOfGraduation" name="dateOfGraduation" value="{{ student.dateOfGraduation_raw }}">
-                                <small class="text-muted">Required if graduation status is 'Graduated'</small>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="d-flex justify-content-between">
-                        <a href="/admin_student/view_student/{{ student.studentId }}" class="btn btn-secondary">Cancel</a>
-                        <button type="submit" class="btn btn-primary">Save Changes</button>
-                    </div>
-                </form>
+    <header>
+        <h1>Edit Student</h1> <!-- Page Title -->
+        <div class="user-dropdown">
+            <button class="dropdown-btn">
+                <div class="profile-avatar">👤</div>
+                <span class="dropdown-arrow">▼</span>
+            </button>
+            <div class="dropdown-content">
+                <a href="{{ url_for('logout') }}" class="logout-option">
+                    <div class="icon">🚪</div>
+                    <span>Logout</span>
+                </a>
             </div>
         </div>
+    </header>
+
+    <div class="container">
+
+        <!-- Breadcrumbs -->
+         <nav aria-label="breadcrumb">
+            <ol class="breadcrumbs">
+                <li><a href="{{ url_for('view_all_students') }}">All Students</a></li> {# Make sure view_all_students route exists #}
+                <li><a href="{{ url_for('view_student', student_id=student.studentId) }}">Student Details</a></li> {# Make sure view_student route exists #}
+                <li>Edit Student</li> {# Current page is not a link #}
+            </ol>
+        </nav>
+
+        <!-- Flash Messages or Error Display -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                 <div>
+                 {% for category, message in messages %}
+                    <div class="message {{ category or 'info' }}">{{ message }}</div>
+                 {% endfor %}
+                 </div>
+            {% endif %}
+        {% endwith %}
+        {# Display specific error message if passed separately #}
+        {% if error_message %}
+             <div class="message danger">{{ error_message }}</div>
+        {% endif %}
+
+
+        <!-- Edit Student Form -->
+        <form method="POST" action="{{ url_for('update_student', student_id=student.studentId) }}" class="edit-student-form"> {# Ensure update_student route exists #}
+            <div class="form-grid"> <!-- Using grid for layout -->
+                 <!-- Left Column -->
+                 <div>
+                     <div class="form-group">
+                         <label for="studentName">Full Name</label>
+                         <input type="text" id="studentName" name="studentName" value="{{ student.studentName }}" required>
+                     </div>
+
+                     <div class="form-group">
+                         <label for="gender">Gender</label>
+                         <select id="gender" name="gender" required>
+                             <option value="Male" {% if student.gender == 'Male' %}selected{% endif %}>Male</option>
+                             <option value="Female" {% if student.gender == 'Female' %}selected{% endif %}>Female</option>
+                             <option value="Other" {% if student.gender == 'Other' %}selected{% endif %}>Other</option>
+                         </select>
+                     </div>
+
+                     <div class="form-group">
+                         <label for="dob">Date of Birth</label>
+                         <input type="date" id="dob" name="dob" value="{{ student.dob_raw }}" required>
+                     </div>
+                 </div>
+
+                 <!-- Right Column -->
+                 <div>
+                    <div class="form-group">
+                        <label for="degreeId">Degree</label>
+                        <select id="degreeId" name="degreeId" required>
+                            {% for degree in degrees %}
+                            <option value="{{ degree.degreeId }}" {% if student.degreeId == degree.degreeId %}selected{% endif %}>
+                                {{ degree.degreeName }} ({{ degree.ugPgType }})
+                            </option>
+                            {% else %}
+                            <option value="" disabled>No degrees available</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="departmentId">Department</label>
+                        <select id="departmentId" name="departmentId" required>
+                            {% for dept in departments %}
+                            <option value="{{ dept.departmentId }}" {% if student.departmentId == dept.departmentId %}selected{% endif %}>
+                                {{ dept.deptName }}
+                            </option>
+                            {% else %}
+                            <option value="" disabled>No departments available</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="dateOfJoining">Date of Joining</label>
+                        <input type="date" id="dateOfJoining" name="dateOfJoining" value="{{ student.dateOfJoining_raw }}" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="graduationStatus">Graduation Status</label>
+                        <select id="graduationStatus" name="graduationStatus" required>
+                            <option value="In Progress" {% if student.graduationStatus == 'In Progress' %}selected{% endif %}>In Progress</option>
+                            <option value="Graduated" {% if student.graduationStatus == 'Graduated' %}selected{% endif %}>Graduated</option>
+                            <option value="Discontinued" {% if student.graduationStatus == 'Discontinued' %}selected{% endif %}>Discontinued</option>
+                            <option value="Max years exceeded" {% if student.graduationStatus == 'Max years exceeded' %}selected{% endif %}>Max years exceeded</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" id="dateOfGraduationContainer" style="display: none;"> <!-- Hide initially via style -->
+                        <label for="dateOfGraduation">Date of Graduation</label>
+                        <input type="date" id="dateOfGraduation" name="dateOfGraduation" value="{{ student.dateOfGraduation_raw }}">
+                        <small class="graduation-date-info">Required if graduation status is 'Graduated'</small>
+                    </div>
+                 </div>
+            </div> <!-- End form-grid -->
+
+            <div class="form-actions">
+                <a href="{{ url_for('view_student', student_id=student.studentId) }}" class="form-button cancel-button">Cancel</a>
+                <button type="submit" class="form-button save-button">Save Changes</button>
+            </div>
+        </form>
+
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <!-- JavaScript for Dropdown -->
     <script>
+        // Dropdown JS
+        const dropdownBtn = document.querySelector('.dropdown-btn');
+        const dropdownContent = document.querySelector('.dropdown-content');
+        if (dropdownBtn && dropdownContent) {
+            dropdownBtn.addEventListener('click', () => dropdownContent.classList.toggle('show'));
+            window.addEventListener('click', (event) => {
+                if (!event.target.matches('.dropdown-btn, .dropdown-arrow, .profile-avatar')) {
+                    if (dropdownContent.classList.contains('show')) dropdownContent.classList.remove('show');
+                }
+            });
+        }
+
         // Show/hide graduation date based on status
-        document.getElementById('graduationStatus').addEventListener('change', function() {
-            const dateOfGraduationContainer = document.getElementById('dateOfGraduationContainer');
-            const dateOfGraduationField = document.getElementById('dateOfGraduation');
-            
-            if (this.value === 'Graduated') {
+        const gradStatusSelect = document.getElementById('graduationStatus');
+        const dateOfGraduationContainer = document.getElementById('dateOfGraduationContainer');
+        const dateOfGraduationField = document.getElementById('dateOfGraduation');
+
+        function toggleGraduationDate() {
+            if (gradStatusSelect.value === 'Graduated') {
                 dateOfGraduationContainer.style.display = 'block';
                 dateOfGraduationField.setAttribute('required', 'required');
             } else {
-                dateOfGraduationContainer.style.display = 'block';
+                 // Keep the field visible but make it not required
+                dateOfGraduationContainer.style.display = 'block'; // Or 'none' if you prefer to hide it completely
                 dateOfGraduationField.removeAttribute('required');
+                // Optionally clear the value if status changes from Graduated
+                // if (gradStatusSelect.value !== 'Graduated' && dateOfGraduationField.value) {
+                //     dateOfGraduationField.value = '';
+                // }
             }
-        });
-        
-        // Trigger on page load
-        document.getElementById('graduationStatus').dispatchEvent(new Event('change'));
+        }
+
+        if(gradStatusSelect && dateOfGraduationContainer && dateOfGraduationField) {
+            gradStatusSelect.addEventListener('change', toggleGraduationDate);
+            // Trigger on page load to set initial state
+            toggleGraduationDate();
+        }
     </script>
 </body>
+
 </html>

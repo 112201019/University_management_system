@@ -116,5 +116,23 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Toggle dropdown menu
+        document.querySelector('.dropdown-btn').addEventListener('click', function () {
+          document.querySelector('.dropdown-content').classList.toggle('show');
+        });
+    
+        // Close the dropdown if clicked outside
+        window.addEventListener('click', function (event) {
+          if (!event.target.matches('.dropdown-btn') &&
+              !event.target.matches('.dropdown-arrow') &&
+              !event.target.matches('.profile-avatar')) {
+            const dropdown = document.querySelector('.dropdown-content');
+            if (dropdown.classList.contains('show')) {
+              dropdown.classList.remove('show');
+            }
+          }
+        });
+      </script>
 </body>
 </html>
