@@ -302,11 +302,125 @@ def view_profile():
         degree_name=degree_name
     )
 
-@app.route('/student/course_registation/add_courses')
+@app.route('/student/course_registration/add_courses', methods=['GET', 'POST'])
 def add_courses():
     if session.get('role') != 'student':
-        return redirect(url_for("login"))
-    return render_template("./student/drop_courses.html", username=session.get("username"))
+        return redirect(url_for('login'))
+
+    user_id = session.get('user_id')
+    if not user_id:
+        flash('Session expired. Please log in again.', 'warning')
+        return redirect(url_for('login'))
+
+    # Handle POST: Add or Drop
+    if request.method == 'POST':
+        offering_id = request.form['offering_id']
+        action = request.form.get('action')
+
+        if action == 'add':
+            # Duplicate check (excluding dropped)
+            dup = db.execute_dql_commands(
+                "SELECT status FROM Enrollment WHERE studentId = :sid AND offeringId = :oid",
+                {'sid': user_id, 'oid': offering_id}
+            ).fetchone()
+
+            if dup and dup[0] != 'Dropped':
+                flash("You've already requested or completed this course.", "warning")
+                return redirect(url_for('add_courses'))
+
+            if dup and dup[0] == 'Dropped':
+                # Reactivate the dropped row
+                db.execute_ddl_and_dml_commands(
+                    '''
+                    UPDATE Enrollment
+                    SET status = 'Pending', enrollmentDate = :edate
+                    WHERE studentId = :sid AND offeringId = :oid
+                    ''',
+                    {'sid': user_id, 'oid': offering_id, 'edate': date.today()}
+                )
+            else:
+                # Compute next enrollmentId
+                maxid_row = db.execute_dql_commands("SELECT COALESCE(MAX(enrollmentId),0) FROM Enrollment").fetchone()
+                next_id = maxid_row[0] + 1
+                db.execute_ddl_and_dml_commands(
+                    '''
+                    INSERT INTO Enrollment (enrollmentId, studentId, offeringId, enrollmentDate, status)
+                    VALUES (:eid, :sid, :oid, :edate, 'Pending')
+                    ''',
+                    {'eid': next_id, 'sid': user_id, 'oid': offering_id, 'edate': date.today()}
+                )
+
+            flash("Course request submitted (pending approval).", "success")
+            return redirect(url_for('add_courses'))
+
+        elif action == 'drop':
+            db.execute_ddl_and_dml_commands(
+                '''
+                UPDATE Enrollment
+                SET status = 'Dropped'
+                WHERE studentId = :sid AND offeringId = :oid AND status = 'Pending'
+                ''',
+                {'sid': user_id, 'oid': offering_id}
+            )
+            flash("Course request dropped.", "info")
+            return redirect(url_for('add_courses'))
+
+    # GET → find the active term
+    today = date.today()
+    term_row = db.execute_dql_commands(
+        "SELECT termId FROM AcademicTerm WHERE startDate < :today AND endDate > :today",
+        {'today': today}
+    ).fetchone()
+
+    courses = []
+    if term_row:
+        term_id = term_row[0]
+        stud_dept = db.execute_dql_commands(
+            "SELECT departmentId FROM Students WHERE studentId = :sid",
+            {'sid': user_id}
+        ).fetchone()[0]
+
+        courses = db.execute_dql_commands("""
+            SELECT
+                co.offeringId AS "offeringId", 
+                c.courseId AS "courseId", 
+                c.courseName AS "courseName", 
+                c.credits AS "credits",
+                d.deptName AS "deptName", 
+                at.termName AS "termName", 
+                p.professorName AS "professorName",
+                CASE 
+                    WHEN c.departmentId = :stud_dept 
+                        THEN 'Core Course' 
+                        ELSE 'Elective Course' 
+                END AS "courseType",
+                (SELECT e.status 
+                    FROM Enrollment e 
+                    WHERE e.studentId = :uid 
+                        AND e.offeringId = co.offeringId) 
+                AS "enrollmentStatus",
+                (SELECT at2.termName
+                FROM Enrollment e2
+                JOIN CourseOffering co2 ON e2.offeringId = co2.offeringId
+                JOIN AcademicTerm at2 ON co2.termId = at2.termId
+                JOIN StudentGrades sg2 ON e2.enrollmentId = sg2.enrollmentId
+                WHERE e2.studentId = :uid AND co2.courseId = c.courseId
+                    AND e2.status = 'Approved' AND sg2.grade > 35
+                ORDER BY at2.startDate DESC LIMIT 1) AS "previousTermName"
+            FROM CourseOffering co
+            JOIN Courses c ON co.courseId = c.courseId
+            JOIN Department d ON c.departmentId = d.departmentId
+            JOIN AcademicTerm at ON co.termId = at.termId
+            JOIN Professors p ON co.professorId = p.professorId
+            WHERE co.termId = :tid
+        """, {'stud_dept': stud_dept, 'tid': term_id, 'uid': user_id}).mappings().all()
+
+        courses = [dict(c) for c in courses]
+        for course in courses:
+            course["can_add"] = not course["enrollmentStatus"] or course["enrollmentStatus"] == "Dropped"
+            course["can_drop"] = course["enrollmentStatus"] == "Pending"
+
+    return render_template('student/add_courses.html', username=session['username'], courses=courses)
 
 @app.route('/student/course_registation/drop_courses')
 def drop_courses():

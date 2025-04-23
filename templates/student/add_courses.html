@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Available Courses</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/student/add_courses.css') }}" />
+</head>
+
+<body>
+    <header>
+        <h1> <span class="student-name">{{ username }}</span>, Pick the Courses You Love</h1>
+        <div class="profile-menu">
+            <div class="profile-icon-wrapper" onclick="toggleDropdown()">
+                <i class="fas fa-user-circle profile-icon"></i>
+            </div>
+            <div class="dropdown" id="dropdownMenu">
+                <a href="{{ url_for('student_dashboard') }}">
+                    <i class="fas fa-home"></i>
+                    <span>Home</span>
+                </a>
+                <a href="{{ url_for('view_profile') }}">
+                    <i class="fas fa-user"></i>
+                    <span>Profile</span>
+                </a>
+                <div class="dropdown-divider"></div>
+                <a href="{{ url_for('logout') }}" class="logout-option">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flashes">
+        {% for category, message in messages %}
+        <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+
+    <div class="container">
+        <div class="page-header">
+            <h2>Available Courses</h2>
+            <p>All courses offered in the current term</p>
+        </div>
+
+        <div class="courses-grid">
+            {% if courses %}
+            {% for c in courses %}
+            <div class="course-card {% if c.enrollmentStatus or c.previouslyPassed == 'Passed' %}enrolled{% endif %}">
+                <div class="card-header">
+                    <h3>
+                        {{ c.courseName }}
+                        <span class="course-id">({{ c.courseId }})</span>
+                    </h3>
+
+                    {% if c.previousTermName %}
+                    <div class="completed-badge">
+                        <i class="fas fa-graduation-cap"></i>
+                        <span>Completed in {{ c.previousTermName }}</span>
+                    </div>
+                    {% elif c.enrollmentStatus %}
+                    <div class="status-badge status-{{ c.enrollmentStatus|lower }}">
+                        <i class="fas fa-{{ 
+                                    'check-circle' if c.enrollmentStatus=='Approved' else 
+                                    'clock' if c.enrollmentStatus=='Pending' else 
+                                    'times-circle' 
+                                 }}"></i>
+                        <span>{{ c.enrollmentStatus }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <div class="info-row">
+                        <div class="info-label"><i class="fas fa-book"></i> Credits</div>
+                        <div class="info-value">{{ c.credits }}</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label"><i class="fas fa-building"></i> Department</div>
+                        <div class="info-value">{{ c.deptName }}</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label"><i class="fas fa-calendar-alt"></i> Term</div>
+                        <div class="info-value">{{ c.termName }}</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label"><i class="fas fa-chalkboard-teacher"></i> Professor</div>
+                        <div class="info-value">{{ c.professorName }}</div>
+                    </div>
+                    <div class="info-row course-type">
+                        <div class="info-label"><i class="fas fa-tag"></i> Type</div>
+                        <div class="info-value">{{ c.courseType }}</div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    {% if c.can_add %}
+                    <form method="POST" action="{{ url_for('add_courses') }}">
+                        <input type="hidden" name="offering_id" value="{{ c.offeringId }}" />
+                        <input type="hidden" name="action" value="add" />
+                        <button type="submit" class="add-btn">Add</button>
+                    </form>
+                    {% elif c.can_drop %}
+                    <form method="POST" action="{{ url_for('add_courses') }}">
+                        <input type="hidden" name="offering_id" value="{{ c.offeringId }}" />
+                        <input type="hidden" name="action" value="drop" />
+                        <button type="submit" class="drop-btn">Drop</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <p class="no-courses">No courses are being offered right now.</p>
+            {% endif %}
+        </div>
+
+        <a href="{{ url_for('student_dashboard') }}" class="back-btn">
+            <i class="fas fa-chevron-left"></i> Back to Dashboard
+        </a>
+    </div>
+
+    <script>
+        function toggleDropdown() {
+            document.getElementById('dropdownMenu').classList.toggle('show');
+        }
+        window.addEventListener('click', function (event) {
+            if (
+                !event.target.matches('.profile-icon') &&
+                !event.target.matches('.profile-icon-wrapper')
+            ) {
+                const dropdown = document.getElementById('dropdownMenu');
+                dropdown.classList.remove('show');
+            }
+        });
+    </script>
+</body>
+
+</html>
