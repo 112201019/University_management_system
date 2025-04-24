@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from sqlalchemy import text
 from sqlalchemy.engine import create_engine
 from datetime import date  # Import to get current date
+from psycopg2 import Error as Psycopg2Error  # for catching trigger exceptions
 
 # --- Database Utility Class ---
 class PostgresqlDB:
@@ -145,7 +146,7 @@ def view_grades():
         return redirect(url_for("login"))
     return render_template("./student/grades.html", username=session.get("username"))
 
-@app.route('/student/course_registation')
+@app.route('/student/course_registration')
 def course_registration():
     if session.get('role') != 'student':
         return redirect(url_for("login"))
@@ -204,33 +205,10 @@ def view_courses():
     selected_term_id = request.args.get('term_id')
 
     if selected_term_id:
-        query = """
-            SELECT 
-                c.courseId AS "courseId", 
-                c.courseName AS "courseName", 
-                c.credits AS "credits", 
-                d.deptName AS "deptName", 
-                at.termName AS "termName", 
-                p.professorName AS "professorName",
-                CASE 
-                    WHEN c.departmentId = :student_dept THEN 'Core Course' 
-                    ELSE 'Elective Course' 
-                END AS "courseType"
-            FROM Enrollment e
-            JOIN CourseOffering co ON e.offeringId = co.offeringId
-            JOIN Courses c ON co.courseId = c.courseId
-            JOIN Department d ON c.departmentId = d.departmentId
-            JOIN AcademicTerm at ON co.termId = at.termId
-            JOIN Professors p ON co.professorId = p.professorId
-            WHERE e.studentId = :student_id 
-              AND e.status = 'Approved'
-              AND at.termId = :selected_term_id;
-        """
-        courses_result = db.execute_dql_commands(query, {
-            'student_id': user_id,
-            'student_dept': student_dept,
-            'selected_term_id': selected_term_id
-        })
+        courses_result = db.execute_dql_commands(
+            "SELECT * FROM get_approved_courses_from_view(:sid, :tid)",
+            {'sid': user_id, 'tid': selected_term_id}
+        )
     else:
         courses_result = None
 
@@ -243,7 +221,6 @@ def view_courses():
         terms=terms,
         selected_term_id=int(selected_term_id) if selected_term_id else None
     )
-
 
 @app.route("/student/profile")
 def view_profile():
@@ -312,24 +289,21 @@ def add_courses():
         flash('Session expired. Please log in again.', 'warning')
         return redirect(url_for('login'))
 
-    # Handle POST: Add or Drop
+    # POST logic (add/drop)
     if request.method == 'POST':
         offering_id = request.form['offering_id']
         action = request.form.get('action')
 
         if action == 'add':
-            # Duplicate check (excluding dropped)
             dup = db.execute_dql_commands(
                 "SELECT status FROM Enrollment WHERE studentId = :sid AND offeringId = :oid",
                 {'sid': user_id, 'oid': offering_id}
             ).fetchone()
 
             if dup and dup[0] != 'Dropped':
-                flash("You've already requested or completed this course.", "warning")
                 return redirect(url_for('add_courses'))
 
             if dup and dup[0] == 'Dropped':
-                # Reactivate the dropped row
                 db.execute_ddl_and_dml_commands(
                     '''
                     UPDATE Enrollment
@@ -339,7 +313,6 @@ def add_courses():
                     {'sid': user_id, 'oid': offering_id, 'edate': date.today()}
                 )
             else:
-                # Compute next enrollmentId
                 maxid_row = db.execute_dql_commands("SELECT COALESCE(MAX(enrollmentId),0) FROM Enrollment").fetchone()
                 next_id = maxid_row[0] + 1
                 db.execute_ddl_and_dml_commands(
@@ -348,10 +321,7 @@ def add_courses():
                     VALUES (:eid, :sid, :oid, :edate, 'Pending')
                     ''',
                     {'eid': next_id, 'sid': user_id, 'oid': offering_id, 'edate': date.today()}
-                )
-
-            flash("Course request submitted (pending approval).", "success")
-            return redirect(url_for('add_courses'))
+                )            
 
         elif action == 'drop':
             db.execute_ddl_and_dml_commands(
@@ -362,10 +332,9 @@ def add_courses():
                 ''',
                 {'sid': user_id, 'oid': offering_id}
             )
-            flash("Course request dropped.", "info")
             return redirect(url_for('add_courses'))
 
-    # GET → find the active term
+    # GET logic
     today = date.today()
     term_row = db.execute_dql_commands(
         "SELECT termId FROM AcademicTerm WHERE startDate < :today AND endDate > :today",
@@ -375,54 +344,29 @@ def add_courses():
     courses = []
     if term_row:
         term_id = term_row[0]
-        stud_dept = db.execute_dql_commands(
-            "SELECT departmentId FROM Students WHERE studentId = :sid",
-            {'sid': user_id}
-        ).fetchone()[0]
+        row = db.execute_dql_commands("""
+            SELECT COALESCE(SUM(c.credits), 0)
+              FROM Enrollment e
+              JOIN CourseOffering co ON e.offeringId = co.offeringId
+              JOIN Courses c ON co.courseId = c.courseId
+             WHERE e.studentId = :sid
+               AND e.status    = 'Pending'
+               AND co.termId   = :tid
+        """, {'sid': user_id, 'tid': term_id}).fetchone()
+        pending_credits = row[0]
 
         courses = db.execute_dql_commands("""
-            SELECT
-                co.offeringId AS "offeringId", 
-                c.courseId AS "courseId", 
-                c.courseName AS "courseName", 
-                c.credits AS "credits",
-                d.deptName AS "deptName", 
-                at.termName AS "termName", 
-                p.professorName AS "professorName",
-                CASE 
-                    WHEN c.departmentId = :stud_dept 
-                        THEN 'Core Course' 
-                        ELSE 'Elective Course' 
-                END AS "courseType",
-                (SELECT e.status 
-                    FROM Enrollment e 
-                    WHERE e.studentId = :uid 
-                        AND e.offeringId = co.offeringId) 
-                AS "enrollmentStatus",
-                (SELECT at2.termName
-                FROM Enrollment e2
-                JOIN CourseOffering co2 ON e2.offeringId = co2.offeringId
-                JOIN AcademicTerm at2 ON co2.termId = at2.termId
-                JOIN StudentGrades sg2 ON e2.enrollmentId = sg2.enrollmentId
-                WHERE e2.studentId = :uid AND co2.courseId = c.courseId
-                    AND e2.status = 'Approved' AND sg2.grade > 35
-                ORDER BY at2.startDate DESC LIMIT 1) AS "previousTermName"
-            FROM CourseOffering co
-            JOIN Courses c ON co.courseId = c.courseId
-            JOIN Department d ON c.departmentId = d.departmentId
-            JOIN AcademicTerm at ON co.termId = at.termId
-            JOIN Professors p ON co.professorId = p.professorId
-            WHERE co.termId = :tid
-        """, {'stud_dept': stud_dept, 'tid': term_id, 'uid': user_id}).mappings().all()
+            SELECT * FROM getAddDropCourses(:uid, :tid)
+        """, {'uid': user_id, 'tid': term_id}).mappings().all()
 
         courses = [dict(c) for c in courses]
         for course in courses:
             course["can_add"] = (not course["enrollmentStatus"] or course["enrollmentStatus"] == "Dropped") and not course["previousTermName"]
-            course["can_drop"] = course["enrollmentStatus"] == "Pending"
+            course["can_drop"] = (course["enrollmentStatus"] == "Pending") and not course["previousTermName"]
 
-    return render_template('student/add_courses.html', username=session['username'], courses=courses)
+    return render_template('student/add_courses.html', username=session['username'], courses=courses, current_credits=pending_credits)
 
-@app.route('/student/course_registation/registration_log')
+@app.route('/student/course_registration/registration_log')
 def registration_log():
     # 1. Ensure student
     if session.get('role') != 'student':
@@ -434,7 +378,6 @@ def registration_log():
 
     today = date.today()
 
-    # 2. Find current term
     term_row = db.execute_dql_commands(
         """
         SELECT termId, termName
@@ -455,46 +398,14 @@ def registration_log():
         )
 
     term_id, term_name = term_row
-
-    # 3. (Optional) load the single-term list for the dropdown
     terms = [{"termId": term_id, "termName": term_name}]
 
-    # 4. Fetch the student’s department (for courseType)
-    stud_dept = db.execute_dql_commands(
-        "SELECT departmentId FROM Students WHERE studentId = :sid",
-        {"sid": student_id}
-    ).fetchone()[0]
+    # 3. Fetch all enrollments via our new function
+    rows = db.execute_dql_commands(
+        "SELECT * FROM get_registration_log(:sid, :term_id)",
+        {"sid": student_id, "term_id": term_id}
+    ).mappings().all()
 
-    # 5. Fetch all enrollments in this term
-    rows = db.execute_dql_commands("""
-        SELECT
-          co.offeringId       AS "offeringId",
-          c.courseId          AS "courseId",
-          c.courseName        AS "courseName",
-          c.credits           AS "credits",
-          d.deptName          AS "deptName",
-          at.termName         AS "termName",
-          p.professorName     AS "professorName",
-          CASE
-            WHEN c.departmentId = :stud_dept THEN 'Core Course'
-            ELSE 'Elective Course'
-          END                  AS "courseType",
-          e.status            AS "status"
-        FROM Enrollment e
-        JOIN CourseOffering co ON e.offeringId = co.offeringId
-        JOIN Courses        c  ON co.courseId    = c.courseId
-        JOIN Department     d  ON c.departmentId = d.departmentId
-        JOIN AcademicTerm   at ON co.termId       = at.termId
-        JOIN Professors     p  ON co.professorId  = p.professorId
-        WHERE e.studentId = :sid
-          AND co.termId    = :term_id
-    """, {
-        "sid":       student_id,
-        "term_id":   term_id,
-        "stud_dept": stud_dept
-    }).mappings().all()
-
-    # 6. Turn each RowMapping into a dict
     courses = [dict(r) for r in rows]
     return render_template(
         "student/registration_log.html",

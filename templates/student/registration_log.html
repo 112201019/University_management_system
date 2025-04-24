@@ -61,13 +61,6 @@
                         {{ c.courseName }}
                         <span class="course-id">({{ c.courseId }})</span>
                     </h3>
-
-                    {% if c.previousTermName %}
-                    <div class="completed-badge">
-                        <i class="fas fa-graduation-cap"></i>
-                        <span>Completed in {{ c.previousTermName }}</span>
-                    </div>
-                    {% elif c.status %}
                     <div class="status-badge status-{{ c.status|lower }}">
                         <i class="status-icon fas fa-{{ 
                                     'check-circle' if c.status=='Approved' else 
@@ -76,7 +69,6 @@
                                  }}"></i>
                         <span>{{ c.status }}</span>
                     </div>
-                    {% endif %}
                 </div>
                 <div class="card-body">
                     <div class="info-row">

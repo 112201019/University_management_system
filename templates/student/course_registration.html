@@ -44,9 +44,9 @@
             <div class="dashboard-item">
                 <a href="{{ url_for('add_courses') }}">
                     <div class="icon">
-                        <i class="fas fa-plus-circle"></i>
+                        <i class="fas fa-tasks"></i>
                     </div>
-                    <div class="title">Enroll in Courses</div>
+                    <div class="title">Add / Drop Courses</div>
                 </a>
             </div>
 
@@ -59,6 +59,9 @@
                 </a>
             </div>
         </div>
+        <a href="{{ url_for('student_dashboard') }}" class="back-btn">
+            <i class="fas fa-chevron-left"></i> Back to Dashboard
+        </a>
     </div>
 
     <script>

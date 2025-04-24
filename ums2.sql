@@ -143,7 +143,9 @@ INSERT INTO Courses (courseId, courseName, departmentId, typeOfCourse, courseTyp
 VALUES
   (3000001, 'Introduction to Programming', 1, 'UG', 'Theory', 4),
   (3000002, 'Data Structures', 1, 'UG', 'Theory', 4),
-  (3000003, 'Programming Lab', 1, 'UG', 'Lab', 2);
+  (3000003, 'Programming Lab', 1, 'UG', 'Lab', 2),
+  (3000010, 'Natural Language Processing', 2, 'UG', 'Theory', 3),
+  (3000011, 'Introduction to AI', 2, 'UG', 'Lab', 5);
 
 -- Department 2 Courses
 INSERT INTO Courses (courseId, courseName, departmentId, typeOfCourse, courseType, credits)
@@ -183,7 +185,9 @@ VALUES
   -- For Department 3
   (4000006, 3000007, 2, 10003, 20),
   (4000007, 3000008, 2, 10003, 20),
-  (4000008, 3000003, 2, 10001, 25);
+  (4000008, 3000003, 2, 10001, 25),
+  (4000009, 3000010, 2, 10002, 30),
+  (4000010, 3000011, 2, 10002, 40);
 
 -- Past term offering (termId = 1) to demonstrate StudentGrades entry.
 INSERT INTO CourseOffering (offeringId, courseId, termId, professorId, maxCapacity)
@@ -230,3 +234,238 @@ VALUES
   ('professor', 10002, '10002'),
   ('professor', 10003, '10003'),
   ('admin', 9999999, '9999999');
+
+CREATE OR REPLACE FUNCTION get_registration_log(
+    p_student_id INT,
+    p_term_id    INT
+)
+RETURNS TABLE (
+    "offeringId"     INT,
+    "courseId"       INT,
+    "courseName"     VARCHAR,
+    "credits"        INT,
+    "deptName"       VARCHAR,
+    "termName"       VARCHAR,
+    "professorName"  VARCHAR,
+    "courseType"     TEXT,
+    "status"         VARCHAR
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_stud_dept INT;
+BEGIN
+    SELECT departmentId
+      INTO v_stud_dept
+      FROM Students
+     WHERE studentId = p_student_id;
+
+    RETURN QUERY
+    SELECT
+      co.offeringId,
+      c.courseId,
+      c.courseName,
+      c.credits,
+      d.deptName,
+      at.termName,
+      p.professorName,
+      CASE
+        WHEN c.departmentId = v_stud_dept THEN 'Core Course'
+        ELSE 'Elective Course'
+      END,
+      e.status
+    FROM Enrollment e
+    JOIN CourseOffering co ON e.offeringId = co.offeringId
+    JOIN Courses        c  ON co.courseId    = c.courseId
+    JOIN Department     d  ON c.departmentId = d.departmentId
+    JOIN AcademicTerm   at ON co.termId       = at.termId
+    JOIN Professors     p  ON co.professorId  = p.professorId
+    WHERE e.studentId = p_student_id
+      AND co.termId    = p_term_id;
+END;
+$$;
+
+CREATE OR REPLACE VIEW vw_student_course_overview AS
+SELECT
+  e.studentId      AS student_id,
+  co.termId        AS term_id,
+  co.offeringId    AS offering_id,
+  c.courseId       AS course_id,
+  c.courseName     AS course_name,
+  c.credits        AS credits,
+  d.deptName       AS dept_name,
+  at.termName      AS term_name,
+  p.professorName  AS professor_name,
+  CASE
+    WHEN c.departmentId = s.departmentId THEN 'Core Course'
+    ELSE 'Elective Course'
+  END               AS course_type,
+  e.status         AS status
+FROM Enrollment     e
+JOIN Students       s  ON e.studentId    = s.studentId
+JOIN CourseOffering co ON e.offeringId   = co.offeringId
+JOIN Courses        c  ON co.courseId    = c.courseId
+JOIN Department     d  ON c.departmentId = d.departmentId
+JOIN AcademicTerm   at ON co.termId       = at.termId
+JOIN Professors     p  ON co.professorId  = p.professorId;
+
+CREATE OR REPLACE FUNCTION get_approved_courses_from_view(
+  p_student_id  INT,
+  p_term_id     INT
+)
+RETURNS TABLE (
+  "offeringId"    INT,
+  "courseId"      INT,
+  "courseName"    VARCHAR,
+  "credits"        INT,
+  "deptName"      VARCHAR,
+  "termName"      VARCHAR,
+  "professorName" VARCHAR,
+  "courseType"    TEXT
+)
+LANGUAGE sql
+AS $$
+  SELECT
+    offering_id,
+    course_id,
+    course_name,
+    credits,
+    dept_name,
+    term_name,
+    professor_name,
+    course_type
+  FROM vw_student_course_overview
+  WHERE student_id = p_student_id
+    AND term_id    = p_term_id
+    AND status     = 'Approved'
+  ORDER BY course_name;
+$$;
+
+CREATE OR REPLACE FUNCTION getAddDropCourses(
+    p_student_id INT,
+    p_term_id    INT
+)
+RETURNS TABLE (
+    "offeringId"       INT,
+    "courseId"         INT,
+    "courseName"       VARCHAR,
+    "credits"          INT,
+    "deptName"         VARCHAR,
+    "termName"         VARCHAR,
+    "professorName"    VARCHAR,
+    "courseType"       TEXT,
+    "enrollmentStatus" VARCHAR,
+    "previousTermName" VARCHAR
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_stud_dept INT;
+    v_stud_type CHAR(2);
+BEGIN
+    -- 1) fetch student’s home department
+    SELECT departmentId
+      INTO v_stud_dept
+      FROM Students
+     WHERE studentId = p_student_id;
+
+    -- 2) fetch whether student is UG or PG
+    SELECT d.ugPgType
+      INTO v_stud_type
+      FROM Students s
+      JOIN Degree   d ON s.degreeId = d.degreeId
+     WHERE s.studentId = p_student_id;
+
+    -- 3) only return courses matching that UG/PG type
+    RETURN QUERY
+    SELECT
+        co.offeringId,
+        c.courseId,
+        c.courseName,
+        c.credits,
+        d.deptName,
+        at.termName,
+        p.professorName,
+        CASE
+          WHEN c.departmentId = v_stud_dept THEN 'Core Course'
+          ELSE 'Elective Course'
+        END,
+        -- current enrollment status (NULL if never enrolled)
+        (SELECT e.status
+           FROM Enrollment e
+          WHERE e.studentId  = p_student_id
+            AND e.offeringId = co.offeringId),
+        -- last term they passed this course (grade > 35), if any
+        (SELECT at2.termName
+           FROM Enrollment    e2
+           JOIN CourseOffering co2 ON e2.offeringId = co2.offeringId
+           JOIN AcademicTerm   at2 ON co2.termId     = at2.termId
+           JOIN StudentGrades  sg2 ON e2.enrollmentId = sg2.enrollmentId
+          WHERE e2.studentId  = p_student_id
+            AND co2.courseId  = c.courseId
+            AND e2.status     = 'Approved'
+            AND sg2.grade    > 35
+          ORDER BY at2.startDate DESC
+          LIMIT 1)
+    FROM CourseOffering co
+    JOIN Courses       c  ON co.courseId    = c.courseId
+    JOIN Department    d  ON c.departmentId = d.departmentId
+    JOIN AcademicTerm  at ON co.termId       = at.termId
+    JOIN Professors    p  ON co.professorId  = p.professorId
+    WHERE co.termId       = p_term_id
+      AND c.typeOfCourse  = v_stud_type   -- <-- match UG/PG
+    ORDER BY d.departmentId,
+             c.courseName,
+             at.termId;
+END;
+$$;
+
+-- 1) Trigger function: checks total pending credits + this new course
+CREATE OR REPLACE FUNCTION check_pending_credits()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  existing_credits INT;
+  this_credit INT;
+  this_term INT;
+BEGIN
+  -- Only enforce on rows that are (about to be) Pending
+  IF (TG_OP = 'INSERT' AND NEW.status = 'Pending')
+     OR (TG_OP = 'UPDATE' AND NEW.status = 'Pending' AND OLD.status <> 'Pending') THEN
+
+    -- Get the term of the offering being added
+    SELECT co.termId, c.credits
+      INTO this_term, this_credit
+    FROM CourseOffering co
+    JOIN Courses c ON co.courseId = c.courseId
+    WHERE co.offeringId = NEW.offeringId;
+
+    -- Sum up all pending credits for the same student and same term
+    SELECT COALESCE(SUM(c.credits), 0)
+      INTO existing_credits
+    FROM Enrollment e
+    JOIN CourseOffering co ON e.offeringId = co.offeringId
+    JOIN Courses c ON co.courseId = c.courseId
+    WHERE e.studentId = NEW.studentId
+      AND e.status = 'Pending'
+      AND co.termId = this_term;
+
+    -- Total including the current one
+    IF existing_credits + this_credit > 24 THEN
+      RAISE EXCEPTION
+        'Enrollments pending (current % + this course % = %) exceed 24-credit limit',
+        existing_credits, this_credit, existing_credits + this_credit;
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+-- 2) Attach it as a BEFORE INSERT/UPDATE trigger on Enrollment
+
+CREATE TRIGGER trg_check_pending_credits
+  BEFORE INSERT OR UPDATE ON Enrollment
+  FOR EACH ROW
+  EXECUTE FUNCTION check_pending_credits();

@@ -471,3 +471,19 @@ header h1 {
     border: 2px solid #8e44ad;
     box-shadow: 0 4px 12px rgba(142, 68, 173, 0.15);
 }
+
+.credit-summary {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    font-size: 1.2rem;
+    background-color: #ecf0f1;
+    padding: 1rem;
+    border-radius: 8px;
+    color: #2c3e50;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.credit-summary i {
+    color: #3498db;
+    margin-right: 0.5rem;
+}
