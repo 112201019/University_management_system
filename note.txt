@@ -1,0 +1,3 @@
+Admin -- all on all
+professor -- Insert on course offering, update on enrollment, inserting and updating in grades
+student --Insert and update on enrollment
