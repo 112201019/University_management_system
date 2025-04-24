@@ -31,14 +31,23 @@
         </div>
     </div>
   </header>
-
+  <!-- flash messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  <div class="flashes">
+      {% for category, message in messages %}
+      <div class="flash {{ category }}">{{ message }}</div>
+      {% endfor %}
+  </div>
+  {% endif %}
+  {% endwith %}
   <div class="container">
     <!-- <div class="welcome-message">
       Welcome, Professor <span class="professor-name">{{ username }}</span>!
     </div> -->
     <div class="welcome-message">
       <h2>Your Academic Portal</h2>
-      <p>Access all your academic information and resources in one place</p>
+      <p>Access your Courses offered, Submit grades, Handle registrations</p>
     </div>
 
     <div class="dashboard">

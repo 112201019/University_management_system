@@ -126,14 +126,6 @@ def logout():
     session.clear()
     return redirect(url_for('home'))
 
-# @app.route('/course_registration1', methods=['GET', 'POST'])
-# def course_registration1():
-#     if request.method == 'POST':
-#         # Toggle the enrollment flag
-#         enroll_open['status'] = not enroll_open['status']
-#         return redirect(url_for('course_registration1'))
-    
-    return render_template('./admin/course_registration/course_registration.html', enroll_status=enroll_open['status'])
 
 @app.route('/admin_student', methods=['GET','POST'])
 def admin_student():
@@ -1239,4 +1231,4 @@ def assign_hod_route():
 def dept():
     return render_template('./admin/department/main_dept.html')
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='10.32.5.70', port=5000)
