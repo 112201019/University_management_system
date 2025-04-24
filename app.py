@@ -140,12 +140,6 @@ def logout():
     session.clear()
     return redirect(url_for('home'))
 
-@app.route('/student/grades')
-def view_grades():
-    if session.get('role') != 'student':
-        return redirect(url_for("login"))
-    return render_template("./student/grades.html", username=session.get("username"))
-
 @app.route('/student/course_registration')
 def course_registration():
     if session.get('role') != 'student':
@@ -415,5 +409,176 @@ def registration_log():
         selected_term_id=term_id
     )
 
+@app.route('/student/grades')
+def view_grades():
+    if session.get('role') != 'student':
+        return redirect(url_for("login"))
+    
+    student_id = session.get("user_id")
+    username = session.get("username")
+    
+    # Get all terms for the dropdown
+    terms_query = """
+        SELECT termId, termName 
+        FROM AcademicTerm 
+        ORDER BY termId DESC
+    """
+    try:
+        terms_result = db.execute_dql_commands(terms_query)
+        terms = []
+        if terms_result is not None:
+            terms = [{"term_id": row[0], "term_name": row[1]} for row in terms_result]
+        else:
+            # Log the issue
+            print("Warning: terms_result is None")
+    except Exception as e:
+        # Log the exception
+        print(f"Error fetching terms: {e}")
+        terms = []
+    
+    # Get selected term from query parameters
+    selected_term_id = request.args.get('term_id')
+    
+    # Initialize variables
+    grades = []
+    sgpa = 0
+    cgpa = 0
+    total_credits = 0
+    total_grade_points = 0
+    
+    if selected_term_id:
+        # Get course enrollments for the selected term
+        enrollments_query = """
+            SELECT 
+                c.courseId, 
+                c.courseName, 
+                c.credits, 
+                d.deptName, 
+                t.termName, 
+                p.professorName, 
+                e.status, 
+                sg.grade as marks, 
+                c.courseType
+            FROM 
+                Enrollment e
+            JOIN 
+                CourseOffering co ON e.offeringId = co.offeringId
+            JOIN 
+                Courses c ON co.courseId = c.courseId
+            JOIN 
+                Department d ON c.departmentId = d.departmentId
+            JOIN 
+                AcademicTerm t ON co.termId = t.termId
+            JOIN 
+                Professors p ON co.professorId = p.professorId
+            LEFT JOIN
+                StudentGrades sg ON e.enrollmentId = sg.enrollmentId
+            WHERE 
+                e.studentId = :student_id AND 
+                e.status = 'Approved' AND 
+                t.termId = :term_id
+        """
+        
+        try:
+            term_enrollments_result = db.execute_dql_commands(
+                enrollments_query, 
+                {"student_id": student_id, "term_id": selected_term_id}
+            )
+            
+            if term_enrollments_result is not None:
+                # Calculate SGPA for selected term
+                term_credits = 0
+                term_grade_points = 0
+                
+                for row in term_enrollments_result:
+                    course_id, course_name, credits, dept_name, term_name, professor_name, status, marks, course_type = row
+                    grade, grade_point = calculate_grade(marks)
+                    
+                    grades.append({
+                        'courseId': course_id,
+                        'courseName': course_name,
+                        'credits': credits,
+                        'deptName': dept_name,
+                        'termName': term_name,
+                        'professorName': professor_name,
+                        'courseType': course_type,
+                        'marks': marks,
+                        'grade': grade,
+                        'gradePoint': grade_point
+                    })
+                    
+                    term_credits += credits
+                    term_grade_points += (credits * grade_point)
+                
+                # Calculate SGPA for this term
+                if term_credits > 0:
+                    sgpa = round(term_grade_points / term_credits, 2)
+        except Exception as e:
+            print(f"Error fetching enrollments: {e}")
+        
+        # Calculate CGPA by getting all completed courses up to this term
+        cgpa_query = """
+            SELECT 
+                c.credits, 
+                sg.grade
+            FROM 
+                Enrollment e
+            JOIN 
+                CourseOffering co ON e.offeringId = co.offeringId
+            JOIN 
+                Courses c ON co.courseId = c.courseId
+            JOIN 
+                AcademicTerm t ON co.termId = t.termId
+            JOIN 
+                StudentGrades sg ON e.enrollmentId = sg.enrollmentId
+            WHERE 
+                e.studentId = :student_id AND 
+                e.status = 'Approved' AND 
+                t.termId <= :term_id
+        """
+        
+        try:
+            all_enrollments_result = db.execute_dql_commands(
+                cgpa_query, 
+                {"student_id": student_id, "term_id": selected_term_id}
+            )
+            
+            if all_enrollments_result is not None:
+                for row in all_enrollments_result:
+                    credits, marks = row
+                    _, grade_point = calculate_grade(marks)
+                    total_credits += credits
+                    total_grade_points += (credits * grade_point)
+                
+                if total_credits > 0:
+                    cgpa = round(total_grade_points / total_credits, 2)
+        except Exception as e:
+            print(f"Error calculating CGPA: {e}")
+    
+    return render_template(
+        "./student/grades.html",
+        username=username,
+        terms=terms,
+        selected_term_id=selected_term_id,
+        grades=grades,
+        sgpa=sgpa,
+        cgpa=cgpa
+    )
+def calculate_grade(marks):
+    if marks >= 91 and marks <= 100:
+        return "S", 10
+    elif marks >= 81 and marks <= 90:
+        return "A", 9
+    elif marks >= 71 and marks <= 80:
+        return "B", 8
+    elif marks >= 61 and marks <= 70:
+        return "C", 7
+    elif marks >= 51 and marks <= 60:
+        return "D", 6
+    elif marks >= 35 and marks <= 50:
+        return "E", 5
+    else:
+        return "F", 0
+    
 if __name__ == '__main__':
     app.run(debug=True)
