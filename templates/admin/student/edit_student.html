@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Edit Student - {{ student.studentName }}</title>
+    <title>Edit Student - {{ student.studentName or student.studentId }}</title> <!-- Handle case where name might be missing on error -->
     <!-- Link to the base style sheet -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/admin/style.css') }}" />
     <!-- Add specific styles for this page -->
@@ -37,14 +37,23 @@
             border-radius: var(--border-radius);
             box-shadow: var(--box-shadow);
         }
-        .form-grid { /* Optional: Use grid for layout */
+        .form-section-heading { /* Style for credit section heading */
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            font-size: 1.1em;
+            font-weight: 600;
+            color: var(--primary-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+        .form-grid {
              display: grid;
-             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* Responsive columns */
-             gap: 1.5rem; /* Space between columns */
-             margin-bottom: 1.5rem; /* Space before buttons */
+             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+             gap: 1.5rem;
+             margin-bottom: 1.5rem;
         }
         .form-group {
-            margin-bottom: 1rem; /* Spacing within columns */
+            margin-bottom: 1rem;
         }
         .form-group label {
             display: block;
@@ -85,44 +94,32 @@
             margin-top: 0.3rem;
         }
 
-        /* Button container */
-        .form-actions {
+        /* Credit Info Display */
+        .credit-info-group {
             display: flex;
-            justify-content: space-between; /* Pushes buttons apart */
-            align-items: center;
-            margin-top: 1.5rem; /* Space above buttons */
-            padding-top: 1.5rem; /* Space from form fields */
-            border-top: 1px solid var(--border-color); /* Separator line */
+            justify-content: space-between; /* Align label and value */
+            padding: 0.5rem 0;
+            border-bottom: 1px dashed var(--border-color); /* Subtle separator */
+        }
+        .credit-info-group:last-child {
+             border-bottom: none;
+        }
+        .credit-label {
+            font-weight: 500;
+            color: var(--text-muted-color);
+        }
+        .credit-value {
+            font-weight: bold;
+            color: var(--text-color);
         }
 
-        /* General button styling */
-        .form-button {
-            padding: 0.7rem 1.5rem;
-            border: none;
-            border-radius: var(--border-radius);
-            cursor: pointer;
-            font-size: 1em;
-            font-weight: 500;
-            text-decoration: none; /* For link button */
-            text-align: center;
-            display: inline-block;
-            transition: background-color 0.2s ease, color 0.2s ease;
-        }
-        .save-button {
-             background-color: var(--primary-color);
-             color: white;
-        }
-        .save-button:hover {
-            background-color: var(--primary-hover-color);
-        }
-        .cancel-button {
-             background-color: var(--secondary-color);
-             color: white;
-        }
-        .cancel-button:hover {
-            background-color: var(--secondary-hover-color);
-            color: white; /* Ensure text stays white */
-        }
+        /* Button container */
+        .form-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color); }
+        .form-button { padding: 0.7rem 1.5rem; border: none; border-radius: var(--border-radius); cursor: pointer; font-size: 1em; font-weight: 500; text-decoration: none; text-align: center; display: inline-block; transition: background-color 0.2s ease, color 0.2s ease; }
+        .save-button { background-color: var(--primary-color); color: white; }
+        .save-button:hover { background-color: var(--primary-hover-color); }
+        .cancel-button { background-color: var(--secondary-color); color: white; }
+        .cancel-button:hover { background-color: var(--secondary-hover-color); color: white; }
 
         /* Message Styling */
         .message { padding: 1rem; margin-bottom: 1.5rem; border: 1px solid transparent; border-radius: var(--border-radius); display: flex; align-items: center; }
@@ -131,36 +128,19 @@
         .message.danger, .message.error { background-color: #f8d7da; border-color: #f5c6cb; color: #721c24;}
         .message.success { background-color: #d4edda; border-color: #c3e6cb; color: #155724;}
 
-        /* Breadcrumb Styling (Simple) */
-        .breadcrumbs {
-            list-style: none;
-            padding: 0;
-            margin: 0 0 1rem 0; /* Space below breadcrumbs */
-            font-size: 0.9em;
-        }
-        .breadcrumbs li {
-            display: inline;
-            color: var(--text-muted-color);
-        }
-        .breadcrumbs li + li:before {
-            content: "/\00a0"; /* Separator */
-            padding: 0 5px;
-            color: var(--text-muted-color);
-        }
-        .breadcrumbs li a {
-            color: var(--primary-color);
-            text-decoration: none;
-        }
-         .breadcrumbs li a:hover {
-             text-decoration: underline;
-         }
+        /* Breadcrumb Styling */
+        .breadcrumbs { list-style: none; padding: 0; margin: 0 0 1rem 0; font-size: 0.9em; }
+        .breadcrumbs li { display: inline; color: var(--text-muted-color); }
+        .breadcrumbs li + li:before { content: "/\00a0"; padding: 0 5px; color: var(--text-muted-color); }
+        .breadcrumbs li a { color: var(--primary-color); text-decoration: none; }
+        .breadcrumbs li a:hover { text-decoration: underline; }
 
     </style>
 </head>
 
 <body>
     <header>
-        <h1>Edit Student</h1> <!-- Page Title -->
+        <h1>Edit Student</h1>
         <div class="user-dropdown">
             <button class="dropdown-btn">
                 <div class="profile-avatar">👤</div>
@@ -180,9 +160,12 @@
         <!-- Breadcrumbs -->
          <nav aria-label="breadcrumb">
             <ol class="breadcrumbs">
-                <li><a href="{{ url_for('view_all_students') }}">All Students</a></li> {# Make sure view_all_students route exists #}
-                <li><a href="{{ url_for('view_student', student_id=student.studentId) }}">Student Details</a></li> {# Make sure view_student route exists #}
-                <li>Edit Student</li> {# Current page is not a link #}
+                 {# Check if student object exists before accessing its properties #}
+                <li><a href="{{ url_for('view_all_students') }}">All Students</a></li>
+                {% if student and student.studentId %}
+                <li><a href="{{ url_for('view_student', student_id=student.studentId) }}">Student Details</a></li>
+                {% endif %}
+                <li>Edit Student</li>
             </ol>
         </nav>
 
@@ -196,20 +179,21 @@
                  </div>
             {% endif %}
         {% endwith %}
-        {# Display specific error message if passed separately #}
         {% if error_message %}
              <div class="message danger">{{ error_message }}</div>
         {% endif %}
 
 
         <!-- Edit Student Form -->
+        {# Ensure student object exists before trying to render the form #}
+        {% if student %}
         <form method="POST" action="{{ url_for('update_student', student_id=student.studentId) }}" class="edit-student-form"> {# Ensure update_student route exists #}
-            <div class="form-grid"> <!-- Using grid for layout -->
+            <div class="form-grid">
                  <!-- Left Column -->
                  <div>
                      <div class="form-group">
                          <label for="studentName">Full Name</label>
-                         <input type="text" id="studentName" name="studentName" value="{{ student.studentName }}" required>
+                         <input type="text" id="studentName" name="studentName" value="{{ student.studentName or '' }}" required>
                      </div>
 
                      <div class="form-group">
@@ -223,15 +207,38 @@
 
                      <div class="form-group">
                          <label for="dob">Date of Birth</label>
-                         <input type="date" id="dob" name="dob" value="{{ student.dob_raw }}" required>
+                         <input type="date" id="dob" name="dob" value="{{ student.dob_raw or '' }}" required>
                      </div>
+
+                      <!-- Academic Progress Section (Left Column) -->
+                      <h3 class="form-section-heading">Academic Progress</h3>
+                      <div class="credit-info-group">
+                          <span class="credit-label">Achieved Total Credits:</span>
+                          <span class="credit-value">{{ student.achievedTotalCredits }}</span>
+                      </div>
+                       <div class="credit-info-group">
+                          <span class="credit-label">Required Total Credits:</span>
+                          <span class="credit-value">{{ student.requiredTotalCredits }}</span>
+                      </div>
+                      <div class="credit-info-group">
+                          <span class="credit-label">Achieved Core Credits*:</span>
+                          <span class="credit-value">{{ student.achievedCoreCredits }}</span>
+                      </div>
+                      <div class="credit-info-group">
+                          <span class="credit-label">Required Core Credits:</span>
+                          <span class="credit-value">{{ student.requiredCoreCredits }}</span>
+                      </div>
+                       <small class="graduation-date-info" style="margin-top: 1rem;">*Core credits based on courses in student's assigned department.</small>
+
                  </div>
+
 
                  <!-- Right Column -->
                  <div>
                     <div class="form-group">
                         <label for="degreeId">Degree</label>
                         <select id="degreeId" name="degreeId" required>
+                            <option value="" disabled {% if not student.degreeId %}selected{% endif %}>-- Select Degree --</option>
                             {% for degree in degrees %}
                             <option value="{{ degree.degreeId }}" {% if student.degreeId == degree.degreeId %}selected{% endif %}>
                                 {{ degree.degreeName }} ({{ degree.ugPgType }})
@@ -245,6 +252,7 @@
                     <div class="form-group">
                         <label for="departmentId">Department</label>
                         <select id="departmentId" name="departmentId" required>
+                             <option value="" disabled {% if not student.departmentId %}selected{% endif %}>-- Select Department --</option>
                             {% for dept in departments %}
                             <option value="{{ dept.departmentId }}" {% if student.departmentId == dept.departmentId %}selected{% endif %}>
                                 {{ dept.deptName }}
@@ -257,7 +265,7 @@
 
                     <div class="form-group">
                         <label for="dateOfJoining">Date of Joining</label>
-                        <input type="date" id="dateOfJoining" name="dateOfJoining" value="{{ student.dateOfJoining_raw }}" required>
+                        <input type="date" id="dateOfJoining" name="dateOfJoining" value="{{ student.dateOfJoining_raw or '' }}" required>
                     </div>
 
                     <div class="form-group">
@@ -270,9 +278,9 @@
                         </select>
                     </div>
 
-                    <div class="form-group" id="dateOfGraduationContainer" style="display: none;"> <!-- Hide initially via style -->
+                    <div class="form-group" id="dateOfGraduationContainer" style="display: none;">
                         <label for="dateOfGraduation">Date of Graduation</label>
-                        <input type="date" id="dateOfGraduation" name="dateOfGraduation" value="{{ student.dateOfGraduation_raw }}">
+                        <input type="date" id="dateOfGraduation" name="dateOfGraduation" value="{{ student.dateOfGraduation_raw or '' }}">
                         <small class="graduation-date-info">Required if graduation status is 'Graduated'</small>
                     </div>
                  </div>
@@ -283,10 +291,32 @@
                 <button type="submit" class="form-button save-button">Save Changes</button>
             </div>
         </form>
+        {% else %}
+         {# If student object is None due to error, show minimal info or just the back button #}
+         <p>Could not load student details.</p>
+          <div>
+             <a href="{{ url_for('view_all_students') or '#' }}" class="back-button">Back to All Students</a>
+         </div>
+        {% endif %}
+
 
     </div>
 
     <!-- JavaScript for Dropdown -->
+    <script>
+        // Dropdown JS (same as before)
+        const dropdownBtn = document.querySelector('.dropdown-btn');
+        const dropdownContent = document.querySelector('.dropdown-content');
+        if (dropdownBtn && dropdownContent) { /* ... */ }
+
+        // Graduation Date Toggle JS (same as before)
+        const gradStatusSelect = document.getElementById('graduationStatus');
+        const dateOfGraduationContainer = document.getElementById('dateOfGraduationContainer');
+        const dateOfGraduationField = document.getElementById('dateOfGraduation');
+        function toggleGraduationDate() { /* ... */ }
+        if(gradStatusSelect && dateOfGraduationContainer && dateOfGraduationField) { /* ... */ }
+    </script>
+    {# Include the full JS from previous answer here #}
     <script>
         // Dropdown JS
         const dropdownBtn = document.querySelector('.dropdown-btn');
@@ -306,20 +336,22 @@
         const dateOfGraduationField = document.getElementById('dateOfGraduation');
 
         function toggleGraduationDate() {
+            // Ensure elements exist before trying to access properties/methods
+            if (!gradStatusSelect || !dateOfGraduationContainer || !dateOfGraduationField) {
+                console.warn("Graduation status elements not found for JS toggle.");
+                return;
+            }
+
             if (gradStatusSelect.value === 'Graduated') {
                 dateOfGraduationContainer.style.display = 'block';
                 dateOfGraduationField.setAttribute('required', 'required');
             } else {
-                 // Keep the field visible but make it not required
-                dateOfGraduationContainer.style.display = 'block'; // Or 'none' if you prefer to hide it completely
+                dateOfGraduationContainer.style.display = 'block'; // Keep visible
                 dateOfGraduationField.removeAttribute('required');
-                // Optionally clear the value if status changes from Graduated
-                // if (gradStatusSelect.value !== 'Graduated' && dateOfGraduationField.value) {
-                //     dateOfGraduationField.value = '';
-                // }
             }
         }
 
+        // Initial check only if elements exist
         if(gradStatusSelect && dateOfGraduationContainer && dateOfGraduationField) {
             gradStatusSelect.addEventListener('change', toggleGraduationDate);
             // Trigger on page load to set initial state

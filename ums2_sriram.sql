@@ -611,3 +611,33 @@ BEGIN
 
 END;
 $$;
+
+
+
+CREATE OR REPLACE FUNCTION get_student_passed_core_credits(p_studentId INT)
+RETURNS INT AS $$
+DECLARE
+    total_core_credits INT;
+    v_student_dept_id INT;
+BEGIN
+    -- Get the student's department first
+    SELECT departmentId INTO v_student_dept_id FROM Students WHERE studentId = p_studentId;
+
+    IF NOT FOUND THEN
+        RETURN 0; -- Student not found
+    END IF;
+
+    -- Sum credits from passed courses within the student's department
+    SELECT COALESCE(SUM(c.credits), 0)
+    INTO total_core_credits
+    FROM Enrollment e
+    JOIN StudentGrades sg ON e.enrollmentId = sg.enrollmentId
+    JOIN CourseOffering co ON e.offeringId = co.offeringId
+    JOIN Courses c ON co.courseId = c.courseId
+    WHERE e.studentId = p_studentId
+      AND sg.grade >= 50.00 -- Assuming 50 is the passing grade threshold
+      AND c.departmentId = v_student_dept_id; -- Core course condition
+
+    RETURN total_core_credits;
+END;
+$$ LANGUAGE plpgsql;

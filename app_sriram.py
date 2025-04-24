@@ -315,42 +315,27 @@ def view_student(student_id):
     }
     
     return render_template('./admin/student/view_student.html', student=student)
-
-# Edit student form
 @app.route('/admin_student/edit_student/<int:student_id>')
 def edit_student(student_id):
-    # Get all degrees for the dropdown
-    degrees_query = """
-        SELECT degreeId, degreeName, ugPgType 
-        FROM Degree 
-        ORDER BY degreeName
-    """
-    degrees_result = db.execute_dql_commands(degrees_query)
     degrees = []
-    for row in degrees_result:
-        degrees.append({
-            'degreeId': row[0],
-            'degreeName': row[1],
-            'ugPgType': row[2]
-        })
-    
-    # Get all departments for the dropdown
-    departments_query = """
-        SELECT departmentId, deptName 
-        FROM Department 
-        ORDER BY deptName
-    """
-    departments_result = db.execute_dql_commands(departments_query)
     departments = []
-    for row in departments_result:
-        departments.append({
-            'departmentId': row[0],
-            'deptName': row[1]
-        })
-    
-    # Query to get the student details
-    student_query = """
-        SELECT 
+    student = None # Initialize student
+    error_message = None # Initialize error message
+
+    try:
+        # Get all degrees for the dropdown
+        degrees_query = "SELECT degreeId, degreeName, ugPgType FROM Degree ORDER BY degreeName"
+        degrees_result = db.execute_dql_commands(degrees_query).fetchall()
+        degrees = [{'degreeId': row[0], 'degreeName': row[1], 'ugPgType': row[2]} for row in degrees_result]
+
+        # Get all departments for the dropdown
+        departments_query = "SELECT departmentId, deptName FROM Department ORDER BY deptName"
+        departments_result = db.execute_dql_commands(departments_query).fetchall()
+        departments = [{'departmentId': row[0], 'deptName': row[1]} for row in departments_result]
+
+        # Query to get the student details *and* required credits from Degree
+        student_query = """
+        SELECT
             s.studentId,
             s.studentName,
             s.degreeId,
@@ -359,40 +344,70 @@ def edit_student(student_id):
             s.gender,
             s.dob,
             s.dateOfGraduation,
-            s.graduationStatus
-        FROM 
+            s.graduationStatus,
+            d.totalCreditsRequired,  -- Added
+            d.coreCreditsRequired    -- Added
+        FROM
             Students s
+        JOIN
+            Degree d ON s.degreeId = d.degreeId -- Join Degree table
         WHERE
             s.studentId = :student_id
-    """
-    
-    # Execute the query with the student_id parameter
-    result = db.execute_dql_commands(student_query, {'student_id': student_id})
-    
-    # Check if student exists
-    student_data = result.fetchone()
-    if not student_data:
-        flash(f"Student with ID {student_id} not found.", "danger")
-        return redirect(url_for('view_all_students'))
-    
-    # Format the student data with raw date values for the form
-    student = {
-        'studentId': student_data[0],
-        'studentName': student_data[1],
-        'degreeId': student_data[2],
-        'departmentId': student_data[3],
-        'dateOfJoining': student_data[4].strftime('%d-%m-%Y') if student_data[4] else 'N/A',
-        'dateOfJoining_raw': student_data[4].strftime('%Y-%m-%d') if student_data[4] else '',
-        'gender': student_data[5],
-        'dob': student_data[6].strftime('%d-%m-%Y') if student_data[6] else 'N/A',
-        'dob_raw': student_data[6].strftime('%Y-%m-%d') if student_data[6] else '',
-        'dateOfGraduation': student_data[7].strftime('%d-%m-%Y') if student_data[7] else 'N/A',
-        'dateOfGraduation_raw': student_data[7].strftime('%Y-%m-%d') if student_data[7] else '',
-        'graduationStatus': student_data[8]
-    }
-    
-    return render_template('./admin/student/edit_student.html', student=student, degrees=degrees, departments=departments)
+        """
+        student_data = db.execute_dql_commands(student_query, {'student_id': student_id}).fetchone()
 
+        if not student_data:
+            flash(f"Student with ID {student_id} not found.", "danger")
+            return redirect(url_for('view_all_students')) # Ensure this route exists
+
+        # --- Calculate Achieved Credits ---
+        achieved_total_credits = db.execute_dql_commands(
+            "SELECT get_student_passed_credits(:sid);", {'sid': student_id}
+        ).scalar() or 0 # Use scalar() or fetchone()[0], default to 0 if None
+
+        achieved_core_credits = db.execute_dql_commands(
+            "SELECT get_student_passed_core_credits(:sid);", {'sid': student_id}
+        ).scalar() or 0 # Use scalar() or fetchone()[0], default to 0 if None
+        # --- End Credit Calculation ---
+
+
+        # Format the student data including credit info
+        student = {
+            'studentId': student_data[0],
+            'studentName': student_data[1],
+            'degreeId': student_data[2],
+            'departmentId': student_data[3],
+            'dateOfJoining': student_data[4].strftime('%d-%m-%Y') if student_data[4] else 'N/A',
+            'dateOfJoining_raw': student_data[4].strftime('%Y-%m-%d') if student_data[4] else '',
+            'gender': student_data[5],
+            'dob': student_data[6].strftime('%d-%m-%Y') if student_data[6] else 'N/A',
+            'dob_raw': student_data[6].strftime('%Y-%m-%d') if student_data[6] else '',
+            'dateOfGraduation': student_data[7].strftime('%d-%m-%Y') if student_data[7] else 'N/A',
+            'dateOfGraduation_raw': student_data[7].strftime('%Y-%m-%d') if student_data[7] else '',
+            'graduationStatus': student_data[8],
+            # Add credit info to the dictionary
+            'requiredTotalCredits': student_data[9],
+            'requiredCoreCredits': student_data[10],
+            'achievedTotalCredits': achieved_total_credits,
+            'achievedCoreCredits': achieved_core_credits
+        }
+
+    except Exception as e:
+         error_message = f"Error loading student data: {str(e)}"
+         app.logger.error(f"Error in edit_student route for ID {student_id}: {e}")
+         # Flash a generic message, the specific error is passed to the template
+         flash("An error occurred while loading student details.", "danger")
+         # Allow rendering the template shell even if data fetching failed partially
+         if student is None: student = {'studentId': student_id} # Pass ID at least
+         if not degrees: degrees = []
+         if not departments: departments = []
+
+
+    return render_template('./admin/student/edit_student.html',
+                           student=student,
+                           degrees=degrees,
+                           departments=departments,
+                           error_message=error_message) # Pass specific error
 # Update student information
 @app.route('/admin_student/update_student/<int:student_id>', methods=['POST'])
 def update_student(student_id):
