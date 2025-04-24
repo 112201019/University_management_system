@@ -422,11 +422,87 @@ def add_courses():
 
     return render_template('student/add_courses.html', username=session['username'], courses=courses)
 
-@app.route('/student/course_registation/drop_courses')
-def drop_courses():
+@app.route('/student/course_registation/registration_log')
+def registration_log():
+    # 1. Ensure student
     if session.get('role') != 'student':
         return redirect(url_for("login"))
-    return render_template("./student/add_courses.html", username=session.get("username"))
+    student_id = session.get("user_id")
+    if not student_id:
+        flash("Session expired. Please log in again.", "warning")
+        return redirect(url_for("login"))
+
+    today = date.today()
+
+    # 2. Find current term
+    term_row = db.execute_dql_commands(
+        """
+        SELECT termId, termName
+          FROM AcademicTerm
+         WHERE :today BETWEEN startDate AND endDate
+        """,
+        {"today": today}
+    ).fetchone()
+
+    if not term_row:
+        flash("No active academic term at the moment.", "info")
+        return render_template(
+            "student/registration_log.html",
+            username=session["username"],
+            courses=[],
+            terms=[],
+            selected_term_id=None
+        )
+
+    term_id, term_name = term_row
+
+    # 3. (Optional) load the single-term list for the dropdown
+    terms = [{"termId": term_id, "termName": term_name}]
+
+    # 4. Fetch the student’s department (for courseType)
+    stud_dept = db.execute_dql_commands(
+        "SELECT departmentId FROM Students WHERE studentId = :sid",
+        {"sid": student_id}
+    ).fetchone()[0]
+
+    # 5. Fetch all enrollments in this term
+    rows = db.execute_dql_commands("""
+        SELECT
+          co.offeringId       AS "offeringId",
+          c.courseId          AS "courseId",
+          c.courseName        AS "courseName",
+          c.credits           AS "credits",
+          d.deptName          AS "deptName",
+          at.termName         AS "termName",
+          p.professorName     AS "professorName",
+          CASE
+            WHEN c.departmentId = :stud_dept THEN 'Core Course'
+            ELSE 'Elective Course'
+          END                  AS "courseType",
+          e.status            AS "status"
+        FROM Enrollment e
+        JOIN CourseOffering co ON e.offeringId = co.offeringId
+        JOIN Courses        c  ON co.courseId    = c.courseId
+        JOIN Department     d  ON c.departmentId = d.departmentId
+        JOIN AcademicTerm   at ON co.termId       = at.termId
+        JOIN Professors     p  ON co.professorId  = p.professorId
+        WHERE e.studentId = :sid
+          AND co.termId    = :term_id
+    """, {
+        "sid":       student_id,
+        "term_id":   term_id,
+        "stud_dept": stud_dept
+    }).mappings().all()
+
+    # 6. Turn each RowMapping into a dict
+    courses = [dict(r) for r in rows]
+    return render_template(
+        "student/registration_log.html",
+        username=session["username"],
+        courses=courses,
+        terms=terms,
+        selected_term_id=term_id
+    )
 
 if __name__ == '__main__':
     app.run(debug=True)

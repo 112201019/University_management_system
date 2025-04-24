@@ -1,17 +1,18 @@
+<!-- Filename: templates/student/registration_log.html -->
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Available Courses</title>
+    <title>My Enrollments</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/student/add_courses.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/student/registration_log.css') }}" />
 </head>
 
 <body>
     <header>
-        <h1> <span class="student-name">{{ username }}</span>, Pick the Courses You Love</h1>
+        <h1><span class="student-name">{{ username }}</span>, Your Enrolled Courses</h1>
         <div class="profile-menu">
             <div class="profile-icon-wrapper" onclick="toggleDropdown()">
                 <i class="fas fa-user-circle profile-icon"></i>
@@ -45,17 +46,16 @@
     {% endif %}
     {% endwith %}
 
-
     <div class="container">
         <div class="page-header">
-            <h2>Available Courses</h2>
-            <p>All courses offered in the current term</p>
+            <h2>Enrolled Courses</h2>
+            <p>Here are the courses you're currently enrolled in</p>
         </div>
 
         <div class="courses-grid">
             {% if courses %}
             {% for c in courses %}
-            <div class="course-card {{ c.enrollmentStatus|lower }}">
+            <div class="course-card {{ c.status|lower }}">
                 <div class="card-header">
                     <h3>
                         {{ c.courseName }}
@@ -67,14 +67,14 @@
                         <i class="fas fa-graduation-cap"></i>
                         <span>Completed in {{ c.previousTermName }}</span>
                     </div>
-                    {% elif c.enrollmentStatus %}
-                    <div class="status-badge status-{{ c.enrollmentStatus|lower }}">
+                    {% elif c.status %}
+                    <div class="status-badge status-{{ c.status|lower }}">
                         <i class="status-icon fas fa-{{ 
-                                    'check-circle' if c.enrollmentStatus=='Approved' else 
-                                    'clock' if c.enrollmentStatus=='Pending' else 
+                                    'check-circle' if c.status=='Approved' else 
+                                    'clock' if c.status=='Pending' else 
                                     'times-circle' 
                                  }}"></i>
-                        <span>{{ c.enrollmentStatus }}</span>
+                        <span>{{ c.status }}</span>
                     </div>
                     {% endif %}
                 </div>
@@ -100,25 +100,10 @@
                         <div class="info-value">{{ c.courseType }}</div>
                     </div>
                 </div>
-                <div class="card-footer">
-                    {% if c.can_add %}
-                    <form method="POST" action="{{ url_for('add_courses') }}">
-                        <input type="hidden" name="offering_id" value="{{ c.offeringId }}" />
-                        <input type="hidden" name="action" value="add" />
-                        <button type="submit" class="add-btn">Add</button>
-                    </form>
-                    {% elif c.can_drop %}
-                    <form method="POST" action="{{ url_for('add_courses') }}">
-                        <input type="hidden" name="offering_id" value="{{ c.offeringId }}" />
-                        <input type="hidden" name="action" value="drop" />
-                        <button type="submit" class="drop-btn">Drop</button>
-                    </form>
-                    {% endif %}
-                </div>
             </div>
             {% endfor %}
             {% else %}
-            <p class="no-courses">No courses are being offered right now.</p>
+            <p class="no-courses">You're not enrolled in any courses currently.</p>
             {% endif %}
         </div>
 
@@ -136,8 +121,7 @@
                 !event.target.matches('.profile-icon') &&
                 !event.target.matches('.profile-icon-wrapper')
             ) {
-                const dropdown = document.getElementById('dropdownMenu');
-                dropdown.classList.remove('show');
+                document.getElementById('dropdownMenu').classList.remove('show');
             }
         });
     </script>
