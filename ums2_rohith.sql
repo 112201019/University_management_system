@@ -340,3 +340,21 @@ BEGIN
     RETURN grade_count;
 END;
 $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE VIEW vw_ProfessorCourseDetails AS
+SELECT 
+    c.courseId AS "courseId", 
+    c.courseName AS "courseName", 
+    c.credits AS "credits", 
+    d.deptName AS "deptName", 
+    at.termName AS "termName",
+    at.termId AS "termId",
+    p.professorId AS "professorId", 
+    c.coursetype AS "courseType",
+    e.studentId AS "studentId" 
+FROM Enrollment e
+JOIN CourseOffering co ON e.offeringId = co.offeringId
+JOIN Courses c ON co.courseId = c.courseId
+JOIN Department d ON c.departmentId = d.departmentId
+JOIN AcademicTerm at ON co.termId = at.termId
+JOIN Professors p ON co.professorId = p.professorId;

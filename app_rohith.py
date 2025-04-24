@@ -156,20 +156,18 @@ def professor_courses():
     # Query the Courses table for courses taught by the professor.
         query = """
             SELECT 
-                c.courseId AS "courseId", 
-                c.courseName AS "courseName", 
-                c.credits AS "credits", 
-                d.deptName AS "deptName", 
-                at.termName AS "termName",
-                c.coursetype AS "courseType"
-            FROM Enrollment e
-            JOIN CourseOffering co ON e.offeringId = co.offeringId
-            JOIN Courses c ON co.courseId = c.courseId
-            JOIN Department d ON c.departmentId = d.departmentId
-            JOIN AcademicTerm at ON co.termId = at.termId
-            JOIN Professors p ON co.professorId = p.professorId
-            WHERE p.professorId = :professor_id
-            AND at.termId = :selected_term_id;
+                "courseId", 
+                "courseName", 
+                "credits", 
+                "deptName", 
+                "termName",
+                "courseType"
+            FROM 
+                vw_ProfessorCourseDetails
+            WHERE 
+                "professorId" = :professor_id 
+            AND 
+                "termId" = :selected_term_id; 
         """
         result = db.execute_dql_commands(query,
                          {'professor_id': professor_id,
@@ -184,8 +182,6 @@ def professor_courses():
                            terms=terms,
                            selected_term_id=int(selected_term_id) if selected_term_id else None
                            )
-
-
 
 
 @app.route("/professor/profile")
@@ -610,36 +606,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from decimal import Decimal, InvalidOperation # Import Decimal for grade handling
 
 
-# database.py (or wherever your db helper is)
-# Make sure your db object/module is imported correctly
-# e.g., from database_setup import db
 
-from flask import Flask, render_template, request, redirect, url_for, session, flash
-# Assume 'db' is your database interaction object/module
-# Make sure Decimal is imported if you decide to use it later, though float is used here
-# from decimal import Decimal
-
-# ... (rest of your Flask app setup) ...
-
-# database.py (or wherever your db helper is)
-# Make sure your db object/module is imported correctly
-# e.g., from database_setup import db
-
-from flask import Flask, render_template, request, redirect, url_for, session, flash
-# Assume 'db' is your database interaction object/module
-# from decimal import Decimal # Keep if needed elsewhere
-
-# ... (rest of your Flask app setup) ...
-
-# database.py (or wherever your db helper is)
-# Make sure your db object/module is imported correctly
-# e.g., from database_setup import db
-
-from flask import Flask, render_template, request, redirect, url_for, session, flash
-# Assume 'db' is your database interaction object/module
-# from decimal import Decimal # Keep if needed elsewhere
-
-# ... (rest of your Flask app setup) ...
 
 @app.route('/professor/grade/<int:offering_id>', methods=['GET', 'POST'])
 def grade_students(offering_id):
@@ -818,32 +785,7 @@ def grade_students(offering_id):
         page_title=f"Grade Students - {course_details['courseName']}"
     )
 
-# database.py (or wherever your db helper is)
-# Make sure your db object/module is imported correctly
-# e.g., from database_setup import db
-
 from flask import Flask, render_template, request, redirect, url_for, session, flash
-# Assume other necessary imports exist
-
-# ... (other routes) ...
-
-# database.py (or wherever your db helper is)
-# Make sure your db object/module is imported correctly
-# e.g., from database_setup import db
-
-from flask import Flask, render_template, request, redirect, url_for, session, flash
-# Assume other necessary imports exist
-
-# ... (other routes) ...
-
-# database.py (or wherever your db helper is)
-# Make sure your db object/module is imported correctly
-# e.g., from database_setup import db
-
-from flask import Flask, render_template, request, redirect, url_for, session, flash
-# Assume other necessary imports exist
-
-# ... (other routes) ...
 
 @app.route('/professor/offer-courses', methods=['GET', 'POST'])
 def offer_courses_list():
@@ -989,8 +931,6 @@ def offer_courses_list():
         if next_offering_id is None: # Should not happen if logic above is correct, but safety check
              flash('Failed to determine the next offering ID.', 'danger')
              return redirect(url_for('offer_courses_list'))
-        # --- End Manual Calculation ---
-
 
         # --- Insert the new course offering (including MANUALLY calculated offeringId) ---
         insert_sql = """
@@ -1006,19 +946,6 @@ def offer_courses_list():
                 'max_capacity': int_max_capacity
             })
 
-            # --- Check if commit is needed (Depends on your db helper) ---
-            # If your db object requires explicit commit, add it here:
-            # try:
-            #     print("--- DEBUG: Attempting commit ---")
-            #     db.commit() # Or session.commit(), etc.
-            #     print("--- DEBUG: Commit successful (if applicable) ---")
-            # except Exception as commit_e:
-            #     print(f"ERROR during commit: {commit_e}")
-            #     # Consider rolling back if commit fails: db.rollback()
-            #     flash('Failed to save changes to the database.', 'danger')
-            #     return redirect(url_for('offer_courses_list')) # Don't proceed if commit fails
-            # --- End commit check ---
-
 
             # Fetch course name for flash message (only after potential commit)
             print("DEBUG: Fetching course name for flash message...")
@@ -1030,14 +957,8 @@ def offer_courses_list():
             flash(f'Successfully added "{course_name}" with Capacity: {int_max_capacity} for {current_term_name}.', 'success')
 
         except Exception as e:
-            # This catches errors during the INSERT execution itself
             print(f"--- DEBUG: Database error during INSERT execution: {e} ---") # Make error obvious
-            # Consider logging the full traceback here for complex errors
-            # import traceback
-            # print(traceback.format_exc())
             flash(f'Failed to add course offering due to a database error: {e}', 'danger')
-            # Don't necessarily redirect here, let the user see the error on the page maybe?
-            # Depending on your desired UX. Redirecting hides the specific error from the user easily.
 
         # Redirect back to the list page after POST attempt
         print("--- DEBUG: Redirecting after POST attempt ---")
@@ -1092,6 +1013,3 @@ def offer_courses_list():
 
 if __name__ == '__main__':
     app.run(debug=True)
-
-# --- at the bottom of your app, before `if __name__ == '__main__':` ---
-
