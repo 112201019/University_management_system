@@ -468,161 +468,112 @@ def registration_log():
         selected_term_id=term_id
     )
 
+from flask import (
+    session, redirect, url_for,
+    request, render_template
+)
+
 @app.route('/student/grades')
 def view_grades():
-    if session.get('role') != 'student':
+    # 1) Auth guard
+    if session.get("role") != "student":
         return redirect(url_for("login"))
-    
-    student_id = session.get("user_id")
-    username = session.get("username")
-    
-    # Get all terms for the dropdown
-    terms_query = """
-        SELECT termId, termName 
-        FROM AcademicTerm 
-        ORDER BY termId DESC
-    """
+
+    student_id       = session.get("user_id")
+    username         = session.get("username")
+    selected_term_id = request.args.get("term_id", type=int)
+    selected_term_name = None
+
+    # 2) If a term is selected, fetch its name
+    if selected_term_id is not None:
+        term_name_sql = """
+            SELECT "termName"
+              FROM "AcademicTerm"
+             WHERE "termId" = :tid
+        """
+        try:
+            row = db.execute_dql_commands(term_name_sql, {"tid": selected_term_id}).fetchone()
+            selected_term_name = row[0] if row else None
+        except Exception as e:
+            print(f"[Grades] Error fetching term name: {e}")
+
+    # 3) Load dropdown terms
+    terms = []
     try:
-        terms_result = db.execute_dql_commands(terms_query)
-        terms = []
-        if terms_result is not None:
-            terms = [{"term_id": row[0], "term_name": row[1]} for row in terms_result]
-        else:
-            # Log the issue
-            print("Warning: terms_result is None")
+        tq = """
+            SELECT termId, termName
+              FROM AcademicTerm
+             ORDER BY termId DESC
+        """
+        cur = db.execute_dql_commands(tq)
+        for term_row in (cur.fetchall() if cur else []):
+            terms.append({
+                "term_id":   term_row[0],
+                "term_name": term_row[1]
+            })
     except Exception as e:
-        # Log the exception
-        print(f"Error fetching terms: {e}")
-        terms = []
-    
-    # Get selected term from query parameters
-    selected_term_id = request.args.get('term_id')
-    
-    # Initialize variables
+        print(f"[Grades] Error fetching terms: {e}")
+
+    # 4) Initialize outputs
     grades = []
-    sgpa = 0
-    cgpa = 0
-    total_credits = 0
-    total_grade_points = 0
-    
-    if selected_term_id:
-        # Get course enrollments for the selected term
-        enrollments_query = """
-            SELECT 
-                c.courseId, 
-                c.courseName, 
-                c.credits, 
-                d.deptName, 
-                t.termName, 
-                p.professorName, 
-                e.status, 
-                sg.grade as marks, 
-                c.courseType
-            FROM 
-                Enrollment e
-            JOIN 
-                CourseOffering co ON e.offeringId = co.offeringId
-            JOIN 
-                Courses c ON co.courseId = c.courseId
-            JOIN 
-                Department d ON c.departmentId = d.departmentId
-            JOIN 
-                AcademicTerm t ON co.termId = t.termId
-            JOIN 
-                Professors p ON co.professorId = p.professorId
-            LEFT JOIN
-                StudentGrades sg ON e.enrollmentId = sg.enrollmentId
-            WHERE 
-                e.studentId = :student_id AND 
-                e.status = 'Approved' AND 
-                t.termId = :term_id
-        """
-        
+    sgpa   = None
+    cgpa   = None
+
+    if selected_term_id is not None:
+        # 5) Fetch per-course details
         try:
-            term_enrollments_result = db.execute_dql_commands(
-                enrollments_query, 
-                {"student_id": student_id, "term_id": selected_term_id}
-            )
-            
-            if term_enrollments_result is not None:
-                # Calculate SGPA for selected term
-                term_credits = 0
-                term_grade_points = 0
-                
-                for row in term_enrollments_result:
-                    course_id, course_name, credits, dept_name, term_name, professor_name, status, marks, course_type = row
-                    grade, grade_point = calculate_grade(marks)
-                    
-                    grades.append({
-                        'courseId': course_id,
-                        'courseName': course_name,
-                        'credits': credits,
-                        'deptName': dept_name,
-                        'termName': term_name,
-                        'professorName': professor_name,
-                        'courseType': course_type,
-                        'marks': marks,
-                        'grade': grade,
-                        'gradePoint': grade_point
-                    })
-                    
-                    term_credits += credits
-                    term_grade_points += (credits * grade_point)
-                
-                # Calculate SGPA for this term
-                if term_credits > 0:
-                    sgpa = round(term_grade_points / term_credits, 2)
+            sql = "SELECT * FROM get_term_grades(:sid, :tid)"
+            cur = db.execute_dql_commands(sql, {"sid": student_id, "tid": selected_term_id})
+            rows = cur.fetchall() if cur else []
+            for (
+                course_id, course_name, credits,
+                dept_name, professor_name, marks,
+                letter_grade, grade_point, course_type
+            ) in rows:
+                grades.append({
+                    "courseId":      course_id,
+                    "courseName":    course_name,
+                    "credits":       credits,
+                    "deptName":      dept_name,
+                    "professorName": professor_name,
+                    "marks":         marks,
+                    "grade":         letter_grade,
+                    "gradePoint":    grade_point,
+                    "courseType":    course_type
+                })
         except Exception as e:
-            print(f"Error fetching enrollments: {e}")
-        
-        # Calculate CGPA by getting all completed courses up to this term
-        cgpa_query = """
-            SELECT 
-                c.credits, 
-                sg.grade
-            FROM 
-                Enrollment e
-            JOIN 
-                CourseOffering co ON e.offeringId = co.offeringId
-            JOIN 
-                Courses c ON co.courseId = c.courseId
-            JOIN 
-                AcademicTerm t ON co.termId = t.termId
-            JOIN 
-                StudentGrades sg ON e.enrollmentId = sg.enrollmentId
-            WHERE 
-                e.studentId = :student_id AND 
-                e.status = 'Approved' AND 
-                t.termId <= :term_id
-        """
-        
+            print(f"[Grades] Error fetching term grades: {e}")
+
+        # 6) Compute SGPA
         try:
-            all_enrollments_result = db.execute_dql_commands(
-                cgpa_query, 
-                {"student_id": student_id, "term_id": selected_term_id}
-            )
-            
-            if all_enrollments_result is not None:
-                for row in all_enrollments_result:
-                    credits, marks = row
-                    _, grade_point = calculate_grade(marks)
-                    total_credits += credits
-                    total_grade_points += (credits * grade_point)
-                
-                if total_credits > 0:
-                    cgpa = round(total_grade_points / total_credits, 2)
+            sql = "SELECT get_sgpa(:sid, :tid)"
+            row = db.execute_dql_commands(sql, {"sid": student_id, "tid": selected_term_id}).fetchone()
+            if row and row[0] is not None:
+                sgpa = round(row[0], 2)
         except Exception as e:
-            print(f"Error calculating CGPA: {e}")
-    
+            print(f"[Grades] Error fetching SGPA: {e}")
+
+        # 7) Compute CGPA
+        try:
+            sql = "SELECT get_cgpa(:sid, :tid)"
+            row = db.execute_dql_commands(sql, {"sid": student_id, "tid": selected_term_id}).fetchone()
+            if row and row[0] is not None:
+                cgpa = round(row[0], 2)
+        except Exception as e:
+            print(f"[Grades] Error fetching CGPA: {e}")
+
+    # 8) Render
     return render_template(
-        "./student/grades.html",
+        "student/grades.html",
         username=username,
         terms=terms,
         selected_term_id=selected_term_id,
+        selected_term_name=selected_term_name,
         grades=grades,
         sgpa=sgpa,
         cgpa=cgpa
     )
+
 def calculate_grade(marks):
     if marks >= 91 and marks <= 100:
         return "S", 10
@@ -2578,4 +2529,4 @@ def add_term():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host='10.32.5.70', port=5000)
+    app.run(debug=True)#, host='10.32.5.70', port=5000)
