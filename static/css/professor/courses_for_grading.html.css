@@ -1,0 +1,284 @@
+/* Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: #f5f5f5;
+}
+
+/* Header & Dropdown (consistent with profile theme) */
+header {
+    background-color: #2c3e50;
+    color: white;
+    padding: 1.5rem;
+    text-align: center;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+header h1 {
+    font-size: 1.8rem;
+}
+
+.profile-menu {
+    position: absolute;
+    right: 2rem;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.profile-icon-wrapper {
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.15);
+    transition: background-color 0.2s;
+}
+
+.profile-icon-wrapper:hover {
+    background-color: rgba(255, 255, 255, 0.25);
+}
+
+.profile-icon {
+    font-size: 1.8rem;
+    color: white;
+}
+
+.dropdown {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 0.7rem);
+    background-color: white;
+    min-width: 220px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    border-radius: 12px;
+    z-index: 10;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.dropdown.show {
+    display: block;
+    animation: fadeIn 0.25s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-15px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dropdown a {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1.2rem;
+    text-decoration: none;
+    color: #2c3e50;
+    transition: background-color 0.2s;
+    font-weight: 500;
+}
+
+.dropdown a:hover {
+    background-color: #f8f9fa;
+}
+
+.dropdown a i {
+    font-size: 1.1rem;
+    margin-right: 1rem;
+    color: #3498db;
+}
+
+.dropdown-divider {
+    height: 1px;
+    background-color: #eaeaea;
+    margin: 0.2rem 1rem;
+}
+
+/* Container & Page Header */
+.container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background-color: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.page-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.page-header h2 {
+    font-size: 2rem;
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+}
+
+.page-header p {
+    color: #7f8c8d;
+}
+
+/* Courses Grid */
+.courses-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 1.75rem;
+}
+
+/* Course Card Styling */
+.course-card {
+    background-color: #ffffff;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.course-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+    background-color: #2c3e50;
+    color: #fff;
+    padding: 1rem 1.5rem;
+}
+
+.card-header h3 {
+    font-size: 1.4rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.course-id {
+    font-size: 0.9rem;
+    color: #ccc;
+}
+
+.card-body {
+    padding: 1.5rem;
+    color: #2c3e50;
+}
+
+.info-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.info-row:last-child {
+    margin-bottom: 0;
+}
+
+.info-label {
+    width: 35%;
+    font-weight: 600;
+    color: #7f8c8d;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.info-value {
+    width: 65%;
+}
+
+.course-type .info-label {
+    color: #e67e22;
+    font-weight: 700;
+}
+
+/* Back Button */
+.back-btn {
+    display: inline-block;
+    text-decoration: none;
+    padding: 0.75rem 1.5rem;
+    background-color: #3498db;
+    color: #fff;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+    margin-top: 2rem;
+}
+
+.back-btn:hover {
+    background-color: #2980b9;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .container {
+        padding: 1rem;
+    }
+
+    .info-row {
+        flex-direction: column;
+    }
+
+    .info-label,
+    .info-value {
+        width: 100%;
+    }
+
+    .info-label {
+        margin-bottom: 0.3rem;
+    }
+}
+
+/* Term Filter Dropdown Container */
+.term-filter {
+    margin: 1.5rem 0;
+    text-align: center;
+}
+
+/* Label for Dropdown */
+.term-filter label {
+    font-size: 1rem;
+    color: #2c3e50;
+    font-weight: 600;
+    margin-right: 0.5rem;
+}
+
+/* Dropdown Select Box Styling */
+.term-filter select {
+    padding: 0.5rem 1rem;
+    border: 2px solid #2c3e50;
+    border-radius: 8px;
+    font-size: 1rem;
+    color: #2c3e50;
+    background-color: #fff;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+/* Focus State for Dropdown */
+.term-filter select:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 8px rgba(52, 152, 219, 0.3);
+}
+
+/* Dropdown Options (applies to most browsers) */
+.term-filter select option {
+    padding: 0.5rem;
+}
+
+/* Optional: Adjust the dropdown arrow */
+.term-filter select::-ms-expand {
+    background-color: transparent;
+    border: 0;
+}

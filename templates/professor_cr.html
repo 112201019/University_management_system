@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Courses</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/professor/professor_grading.css') }}">
+</head>
+
+<body>
+  <header>
+    <h1>My Courses</h1>
+    <div class="profile-menu">
+      <div class="profile-icon-wrapper" onclick="toggleDropdown()">
+        <i class="fas fa-user-circle profile-icon"></i>
+      </div>
+      <div class="dropdown" id="dropdownMenu">
+        <a href="{{ url_for('professor_dashboard') }}">
+          <i class="fas fa-home"></i>
+          <span>Home</span>
+        </a>
+        <a href="{{ url_for('view_profile') }}">
+          <i class="fas fa-user"></i>
+          <span>Profile</span>
+        </a>
+        <div class="dropdown-divider"></div>
+        <a href="{{ url_for('logout') }}" class="logout-option">
+          <i class="fas fa-sign-out-alt"></i>
+          <span>Logout</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="page-header">
+      <h2>Courses Offered in prsent term</h2>
+      <!-- <p>Select a term to view your enrolled courses</p> -->
+    </div>
+    <!-- Added Dropdown for Term Filtering -->
+    <!-- <div class="term-filter">
+      <form method="GET" action="{{ url_for('professor_courses') }}">
+          <label for="termSelect">Filter by Term:</label>
+          <select name="term_id" id="termSelect" onchange="this.form.submit()">
+              <option value="">-- Select Term --</option>
+              {% for term in terms %}
+                  <option value="{{ term.termId }}"
+                      {% if selected_term_id and term.termId == selected_term_id %}selected{% endif %}>
+                      {{ term.termName }}
+                  </option>
+              {% endfor %}
+          </select>
+      </form>
+    </div> -->
+
+  <!-- Courses Grid -->
+    <div class="courses-grid">
+      {% if courses %}
+        {% for course in courses %}
+          <div class="course-card">
+            <div class="card-header">
+              <h3>
+                {{ course.coursename }}
+                <span class="course-id">({{ course.courseid}})</span>
+              </h3>
+            </div>
+            <div class="card-body">
+              <div class="info-row">
+                <div class="info-label"><i class="fas fa-book"></i> Credits</div>
+                <div class="info-value">{{ course.credits }}</div>
+              </div>
+              <div class="info-row">
+                <div class="info-label"><i class="fas fa-tag"></i> Type</div>
+                <div class="info-value">{{ course.coursetype }}</div>
+              </div>
+              <div class="info-row">
+                <div class="info-label"><i class="fas fa-calendar-alt"></i> Term</div>
+                <div class="info-value">{{ course.termid }}</div>
+              </div>
+              <div class="info-row">
+                <div class="info-label"><i class="fas fa-building"></i> Department</div>
+                <div class="info-value">{{ course.deptname }}</div>
+              </div>
+              <div class="info-row info-row-action"> <!-- Added info-row-action for potential alignment -->
+                <a href="{{ url_for('professor_pending_students', offering_id=course.offeringid) }}" class="btn registration-btn">
+                    <i class="fas fa-list-check"></i> Registration <!-- Optional Icon -->
+                </a>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="no-courses">
+          <p>No courses found.</p>
+        </div>
+      {% endif %}
+    </div>
+
+    <a href="{{ url_for('professor_dashboard') }}" class="back-btn">
+      <i class="fas fa-chevron-left"></i> Back to Dashboard
+    </a>
+  </div>
+
+  <script>
+    function toggleDropdown() {
+      document.getElementById('dropdownMenu').classList.toggle('show');
+    }
+    window.addEventListener('click', function (event) {
+      if (!event.target.matches('.profile-icon') && !event.target.matches('.profile-icon-wrapper')) {
+        let dropdown = document.getElementById('dropdownMenu');
+        if (dropdown.classList.contains('show')) {
+          dropdown.classList.remove('show');
+        }
+      }
+    });
+  </script>
+</body>
+
+</html>

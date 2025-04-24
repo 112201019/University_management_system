@@ -60,8 +60,10 @@ CREATE TABLE AcademicTerm (
   CHECK (endDate > startDate)
 );
 
+
+CREATE SEQUENCE offering_id_seq START WITH 4000001 INCREMENT BY 1;
 CREATE TABLE CourseOffering (
-  offeringId int PRIMARY KEY,
+  offeringId INT NOT NULL PRIMARY KEY DEFAULT nextval('offering_id_seq'),
   courseId int NOT NULL,
   termId int NOT NULL,
   professorId int NOT NULL,

@@ -50,16 +50,23 @@
       </div>
 
       <div class="dashboard-item">
-        <a href="{{ url_for('professor_gradebook')}}">
+        <a href="{{ url_for('courses_for_grading')}}">
           <i class="fas fa-clipboard-check icon"></i>
           <div class="title">Submit Grades</div>
         </a>
       </div>
 
       <div class="dashboard-item">
-        <a href="/professor/student_registration">
+        <a href="{{ url_for('professor_pending_registrations')}}">
           <i class="fas fa-user-check icon"></i>
           <div class="title">Students Registration</div>
+        </a>
+      </div>
+
+      <div class="dashboard-item">
+        <a href="{{ url_for('offer_courses_list')}}">
+          <i class="fas fa-plus icon"></i>
+          <div class="title">Adding term Courses</div>
         </a>
       </div>
     </div>

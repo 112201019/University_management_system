@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }}</title> {# Rendered from Flask #}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Link to your common CSS or add styles here -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/professor/common.css') }}"> <!-- Example -->
+    <style>
+        /* Basic styling - Adapt as needed */
+        body { font-family: sans-serif; margin: 0; background-color: #f8f9fa; color: #333; }
+        .container { max-width: 950px; margin: 30px auto; padding: 30px; background-color: #fff; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+
+        /* Header */
+        .page-header { border-bottom: 1px solid #dee2e6; margin-bottom: 25px; padding-bottom: 15px; }
+        .page-header h2 { margin: 0 0 8px 0; color: #0056b3; font-size: 1.9em; }
+        .page-header p { margin: 5px 0; color: #495057; font-size: 1.1em; }
+        .page-header strong { color: #212529; }
+
+        /* Flash Messages */
+        .flash-messages { list-style: none; padding: 0; margin: 0 0 20px 0; }
+        .flash-messages li { padding: 15px 20px; margin-bottom: 10px; border-radius: 5px; border: 1px solid transparent; font-weight: 500; }
+        .flash-success { color: #155724; background-color: #d4edda; border-color: #c3e6cb; }
+        .flash-danger { color: #721c24; background-color: #f8d7da; border-color: #f5c6cb; }
+        .flash-warning { color: #856404; background-color: #fff3cd; border-color: #ffeeba; }
+        .flash-info { color: #0c5460; background-color: #d1ecf1; border-color: #bee5eb; }
+
+        /* Table Styling */
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #e9ecef; vertical-align: middle; }
+        th { background-color: #e9ecef; font-weight: 600; color: #495057; text-transform: uppercase; font-size: 0.9em; }
+        tr:nth-child(even) { background-color: #f8f9fa; }
+
+        /* Action Cell Styling */
+        td.action-cell { text-align: right; width: 200px; } /* Allocate space for input+button */
+
+        /* Add Button Styling */
+        .btn-add {
+            padding: 6px 15px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.9em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            margin-left: 8px;
+        }
+        .btn-add:hover { background-color: #218838; }
+        .btn-add i { margin-right: 5px; }
+
+        /* Capacity Input Styling */
+        .capacity-input {
+            width: 80px;
+            padding: 6px 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 0.9em;
+            box-sizing: border-box;
+            text-align: right;
+        }
+        .capacity-input:focus {
+            border-color: #80bdff;
+            outline: 0;
+            box-shadow: 0 0 0 0.15rem rgba(0,123,255,.25);
+        }
+
+        /* Already Offered Status */
+        .status-offered {
+            color: #6c757d;
+            font-style: italic;
+            font-size: 0.9em;
+            font-weight: 500;
+            padding: 6px 15px;
+            display: inline-block;
+            text-align: right;
+            width: 100%;
+        }
+        .status-offered i { margin-right: 5px; }
+
+
+        /* Form inside table cell - Use Flexbox for alignment */
+        td.action-cell form {
+            margin: 0;
+            display: flex;
+            justify-content: flex-end; /* Align input and button to the right */
+            align-items: center;     /* Align items vertically */
+            gap: 5px;                /* Space between input and button */
+        }
+
+        /* No Courses Message */
+        .no-courses-message {
+            text-align: center; color: #6c757d; margin-top: 30px; padding: 25px; background-color: #f8f9fa; border-radius: 5px; font-size: 1.1em; border: 1px dashed #ced4da;
+        }
+        .no-courses-message i { color: #ffc107; margin-right: 8px; }
+
+        /* Back Link */
+        .back-link {
+            display: inline-block; margin-top: 25px; padding: 9px 16px; background-color: #6c757d; color: white; text-decoration: none; border-radius: 5px; transition: background-color 0.2s ease; font-weight: 500; font-size: 0.95em;
+        }
+        .back-link:hover { background-color: #5a6268; text-decoration: none; }
+        .back-link i { margin-right: 6px; }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <!-- Flash Messages Display -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <ul class="flash-messages">
+                {% for category, message in messages %}
+                <li class="flash-{{ category }}">{{ message }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        {% endwith %}
+
+        <div class="page-header">
+            <h2>Offer Courses</h2>
+            {# Render variables passed from Flask #}
+            <p>Department: <strong>{{ department_name }}</strong></p>
+            <p>Current Term: <strong>{{ current_term_name }}</strong></p>
+            <p><small>Select courses from your department to offer this term. Specify capacity and you ({{ username }}) will be the instructor.</small></p>
+        </div>
+
+        {# Check if the department_courses list is not empty #}
+        {% if department_courses %}
+            <table>
+                <thead>
+                    <tr>
+                        {# Only Course Name Header #}
+                        <th>Course Name</th>
+                        <th style="text-align: right;">Status / Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {# Loop through courses passed from Flask #}
+                    {% for course in department_courses %}
+                        {# Use .get() for robust key access (handles 'courseid' or 'courseId') #}
+                        {% set course_id = course.get('courseid') or course.get('courseId') %}
+                        {% set course_name = course.get('coursename') or course.get('courseName') %}
+                        <tr>
+                            {# Display Course Name #}
+                            <td>{{ course_name if course_name else 'N/A' }}</td>
+                            <td class="action-cell">
+                                {# Check if the course ID exists in the offered_course_ids set #}
+                                {% if course_id in offered_course_ids %}
+                                    {# Display 'Already Offered' status #}
+                                    <span class="status-offered">
+                                        <i class="fas fa-check-circle"></i> Already Offered
+                                    </span>
+                                {% else %}
+                                    {# Display the form to add the offering #}
+                                    <form method="POST" action="{{ url_for('offer_courses_list') }}">
+                                        {# Hidden input: carries the specific course ID to the POST request #}
+                                        <input type="hidden" name="course_id" value="{{ course_id }}">
+
+                                        {# Input for Max Capacity #}
+                                        <input type="number"
+                                               name="max_capacity"
+                                               class="capacity-input"
+                                               placeholder="Capacity"
+                                               title="Enter maximum student capacity (must be > 0)"
+                                               required
+                                               min="1"> {# Client-side validation #}
+
+                                        {# Submit button for this specific course #}
+                                        <button type="submit" class="btn-add">
+                                            <i class="fas fa-plus"></i> Add Offering
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %} {# End of loop through courses #}
+                </tbody>
+            </table>
+        {% else %}
+            {# Displayed if department_courses list is empty #}
+            <div class="no-courses-message">
+                <p><i class="fas fa-info-circle"></i> No courses found for your department ({{ department_name }}).</p>
+            </div>
+        {% endif %} {# End of check if department_courses exists #}
+
+        <!-- Link back to the dashboard -->
+        {# Ensure 'professor_dashboard' is the correct route name #}
+        <a href="{{ url_for('professor_dashboard') }}" class="back-link">
+            <i class="fas fa-chevron-left"></i> Back to Dashboard
+        </a>
+
+    </div> <!-- /container -->
+</body>
+</html>

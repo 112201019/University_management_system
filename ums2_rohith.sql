@@ -234,3 +234,109 @@ VALUES
 CREATE ROLE student;
 CREATE ROLE professor;
 CREATE ROLE admin;
+
+CREATE OR REPLACE FUNCTION CheckCourseCapacity(p_offering_id INT)
+RETURNS BOOLEAN AS $$
+DECLARE
+    v_max_capacity INT;
+    v_current_enrollment INT;
+BEGIN
+    -- Get the max capacity for the offering
+    SELECT maxCapacity INTO v_max_capacity
+    FROM CourseOffering
+    WHERE offeringId = p_offering_id;
+    
+    -- If offering not found, return false
+    IF NOT FOUND THEN
+        RETURN FALSE;
+    END IF;
+    
+    -- Get the current count of *approved* students
+    SELECT COUNT(*) INTO v_current_enrollment
+    FROM Enrollment
+    WHERE offeringId = p_offering_id AND status = 'Approved';
+    
+    -- Check if adding one more student exceeds capacity
+    RETURN (v_current_enrollment < v_max_capacity);
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION AddStudentGradeOnApproval()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Check if the status column was updated to 'Approved'
+    IF TG_OP = 'UPDATE' AND NEW.status = 'Approved' AND OLD.status <> 'Approved' THEN
+        -- Insert a corresponding record into StudentGrades with NULL grade initially
+        INSERT INTO StudentGrades (enrollmentId, grade, remarks)
+        VALUES (NEW.enrollmentId, 0, 'Automatically created upon enrollment approval');
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Drop the trigger if it exists to avoid errors
+-- DROP TRIGGER IF EXISTS trg_Enrollment_AfterUpdate_AddGrade ON Enrollment;
+
+-- Create the trigger
+CREATE OR REPLACE TRIGGER trg_Enrollment_AfterUpdate_AddGrade
+AFTER UPDATE ON Enrollment
+FOR EACH ROW
+EXECUTE FUNCTION AddStudentGradeOnApproval();
+
+-- Function to calculate the average grade for a course offering
+CREATE OR REPLACE FUNCTION GetCourseAverageGrade (p_offering_id INT)
+RETURNS DOUBLE PRECISION -- Or NUMERIC for exact precision
+AS $$
+DECLARE
+    avg_grade DOUBLE PRECISION;
+BEGIN
+    SELECT AVG(sg.grade)
+    INTO avg_grade
+    FROM StudentGrades sg
+    JOIN Enrollment e ON sg.enrollmentId = e.enrollmentId
+    WHERE e.offeringId = p_offering_id
+      AND e.status = 'Approved'
+      AND sg.grade IS NOT NULL;
+
+    RETURN avg_grade; -- Returns NULL if no non-null grades found
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to calculate the sample standard deviation for a course offering
+CREATE OR REPLACE FUNCTION GetCourseStdDevGrade (p_offering_id INT)
+RETURNS DOUBLE PRECISION -- Or NUMERIC
+AS $$
+DECLARE
+    stddev_grade DOUBLE PRECISION;
+BEGIN
+    SELECT STDDEV_SAMP(sg.grade) -- Standard sample deviation
+    INTO stddev_grade
+    FROM StudentGrades sg
+    JOIN Enrollment e ON sg.enrollmentId = e.enrollmentId
+    WHERE e.offeringId = p_offering_id
+      AND e.status = 'Approved'
+      AND sg.grade IS NOT NULL;
+
+    RETURN stddev_grade; -- Returns NULL if count is 0 or 1
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to count graded students (Optional but good practice)
+CREATE OR REPLACE FUNCTION CountGradedStudents (p_offering_id INT)
+RETURNS INTEGER
+AS $$
+DECLARE
+    grade_count INTEGER;
+BEGIN
+    SELECT COUNT(sg.grade)
+    INTO grade_count
+    FROM StudentGrades sg
+    JOIN Enrollment e ON sg.enrollmentId = e.enrollmentId
+    WHERE e.offeringId = p_offering_id
+      AND e.status = 'Approved'
+      AND sg.grade IS NOT NULL;
+
+    RETURN grade_count;
+END;
+$$ LANGUAGE plpgsql;
