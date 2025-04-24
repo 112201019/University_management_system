@@ -123,6 +123,54 @@ def login():
             return redirect(url_for('login'))
     
     return render_template('login.html')
+
+@app.route('/change-password', methods=['GET', 'POST'])
+def change_password():
+    if request.method == 'POST':
+        role = request.form.get('role')
+        user_id = request.form.get('user_id')
+        old_password = request.form.get('old_password')
+        new_password = request.form.get('new_password')
+        confirm_password = request.form.get('confirm_password')
+        
+        # Validate if new passwords match
+        if new_password != confirm_password:
+            flash('New passwords do not match')
+            return redirect(url_for('change_password'))
+        
+        # Validate current credentials
+        query = """
+            SELECT * FROM UserLogin 
+            WHERE userId = :user_id AND role = :role AND password = :password
+        """
+        result = db.execute_dql_commands(query, {
+            'user_id': user_id,
+            'role': role,
+            'password': old_password
+        })
+        user = result.fetchone()
+        
+        if not user:
+            flash('Invalid credentials')
+            return redirect(url_for('change_password'))
+        
+        # Update password
+        update_query = """
+            UPDATE UserLogin 
+            SET password = :new_password 
+            WHERE userId = :user_id AND role = :role
+        """
+        db.execute_ddl_and_dml_commands(update_query, {
+            'new_password': new_password,
+            'user_id': user_id,
+            'role': role
+        })
+        
+        flash('Password changed successfully!', "success")
+        return redirect(url_for('login'))
+    
+    return render_template('change_password.html')
+
 @app.route('/admin_dashboard')
 def admin_dashboard():
     if session.get('role') != 'admin':
