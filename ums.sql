@@ -211,12 +211,12 @@ VALUES
 -- 10. Insert Student Grades for the completed enrollment from the past term
 INSERT INTO StudentGrades (enrollmentId, grade, remarks)
 VALUES
-  (5000007, 85.50, 'Good performance');
-  (5000001,  0.00, 'Null');  
-  (5000002,  0.00, 'Null');
-  (5000003,  0.00, 'Null');
-  (5000004,  0.00, 'Null');
-  (5000005,  0.00, 'Null');
+  (5000007, 85.50, 'Good performance'),
+  (5000001,  0.00, 'Null'),
+  (5000002,  0.00, 'Null'),
+  (5000003,  0.00, 'Null'),
+  (5000004,  0.00, 'Null'),
+  (5000005,  0.00, 'Null'),
   (5000006,  0.00, 'Null');
   
 
@@ -240,11 +240,11 @@ CREATE ROLE student;
 CREATE ROLE professor;
 
 -- Grant all privileges to admin on all tables
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA UMS_final TO admin;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA UMS_final TO admin;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO admin;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO admin;
 
 -- Grant select on all tables to all roles
-GRANT SELECT ON ALL TABLES IN SCHEMA UMS_final TO student, professor, admin;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO student, professor, admin;
 
 -- Professor privileges
 GRANT INSERT ON TABLE CourseOffering TO professor;
@@ -257,7 +257,7 @@ GRANT INSERT, UPDATE ON TABLE Enrollment TO student;
 -- Revoke privileges on UserLogin table for non-admin roles
 REVOKE ALL PRIVILEGES ON TABLE UserLogin FROM student, professor;
 GRANT SELECT ON TABLE UserLogin TO student, professor;
-GRANT USAGE ON SCHEMA UMS_final TO admin, professor, student;
+GRANT USAGE ON SCHEMA public TO admin, professor, student;
 
 
 --admin level functions
@@ -1030,3 +1030,69 @@ CREATE TRIGGER trg_check_pending_credits
   BEFORE INSERT OR UPDATE ON Enrollment
   FOR EACH ROW
   EXECUTE FUNCTION check_pending_credits();
+
+-- Function to check if adding a new term is allowed
+-- Returns TRUE if allowed, FALSE otherwise
+CREATE OR REPLACE FUNCTION can_add_new_term()
+RETURNS BOOLEAN AS $$
+DECLARE
+    v_latest_endDate DATE;
+BEGIN
+    -- Find the end date of the term with the highest ID (most recently added)
+    SELECT endDate
+    INTO v_latest_endDate
+    FROM AcademicTerm
+    ORDER BY termId DESC -- Assuming higher termId means later term
+    LIMIT 1;
+
+    -- If no terms exist yet, allow adding the first one
+    IF NOT FOUND THEN
+        RETURN TRUE;
+    END IF;
+
+    -- Allow adding if the current date is past the latest term's end date
+    IF CURRENT_DATE > v_latest_endDate THEN
+        RETURN TRUE;
+    ELSE
+        RETURN FALSE;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- Function to get the next term ID (unchanged from previous example)
+CREATE OR REPLACE FUNCTION get_next_term_id()
+RETURNS INT AS $$
+DECLARE
+    next_id INT;
+BEGIN
+    SELECT COALESCE(MAX(termId), 0) + 1 INTO next_id FROM AcademicTerm;
+    RETURN next_id;
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- Procedure to insert a new term (validation simplified, relies on application check)
+CREATE OR REPLACE PROCEDURE insert_academic_term(
+    p_termName VARCHAR(50),
+    p_startDate DATE,
+    p_endDate DATE
+)
+LANGUAGE plpgsql AS $$
+DECLARE
+    v_termId INT;
+BEGIN
+    -- Basic date validation (should also be done in application)
+    IF p_endDate <= p_startDate THEN
+        RAISE EXCEPTION 'End date (%) must be after start date (%).', p_endDate, p_startDate;
+    END IF;
+
+    -- Get the next term ID
+    v_termId := get_next_term_id();
+
+    -- Insert the new term
+    INSERT INTO AcademicTerm (termId, termName, startDate, endDate)
+    VALUES (v_termId, p_termName, p_startDate, p_endDate);
+END;
+$$;
+

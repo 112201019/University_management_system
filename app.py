@@ -3,7 +3,7 @@ from sqlalchemy import text
 from sqlalchemy.engine import create_engine
 from datetime import date  # Import to get current date
 from psycopg2 import Error as Psycopg2Error  # for catching trigger exceptions
-
+import datetime
 # --- Database Utility Class ---
 class PostgresqlDB:
     def __init__(self, user_name, password, host, port, db_name):
@@ -2477,6 +2477,105 @@ def assign_hod_route():
 @app.route('/admin/department', methods=['GET'])
 def dept():
     return render_template('./admin/department/main_dept.html')
+
+
+@app.route('/admin/add_term', methods=['GET', 'POST'])
+def add_term():
+    # Check if adding a term is currently allowed using the SQL function
+    try:
+        # Assumes .scalar() or similar returns a boolean from the function call
+        is_add_allowed = db.execute_dql_commands("SELECT can_add_new_term();").scalar()
+    except Exception as e:
+        app.logger.error(f"Error checking if term can be added: {e}")
+        flash("Error checking term addition permissions. Please try again later.", "danger")
+        is_add_allowed = False # Default to not allowed on error
+
+    # --- GET Request ---
+    if request.method == 'GET':
+        if not is_add_allowed:
+            flash("Cannot add a new term until the most recently defined term has ended.", "warning")
+            # Option 1: Redirect to dashboard
+            # return redirect(url_for('admin_dashboard'))
+            # Option 2: Render the template but disable the form / show message
+            return render_template('admin/term/add_term.html', add_allowed=False)
+        else:
+            # Prepare data for the form (e.g., feasible years)
+            current_year = datetime.date.today().year
+            # Allow selecting current year up to 5 years in the future
+            feasible_years = list(range(current_year, current_year + 6))
+            return render_template('admin/term/add_term.html', add_allowed=True, years=feasible_years)
+
+    # --- POST Request ---
+    if request.method == 'POST':
+        # Re-check permission on POST for security
+        if not is_add_allowed:
+             flash("Term addition is currently blocked.", "danger")
+             return redirect(url_for('add_term')) # Redirect back to GET which will show message
+
+        # Get form data
+        season = request.form.get('season')
+        year_str = request.form.get('year')
+        start_date_str = request.form.get('start_date')
+        end_date_str = request.form.get('end_date')
+
+        # --- Server-side Validation ---
+        if not all([season, year_str, start_date_str, end_date_str]):
+            flash("All fields are required.", "warning")
+            # Need to regenerate year list for re-render
+            current_year = datetime.date.today().year
+            feasible_years = list(range(current_year, current_year + 6))
+            return render_template('admin/term/add_term.html', add_allowed=True, years=feasible_years)
+
+        if season not in ['Spring', 'Fall', 'Summer', 'Winter']: # Add more if needed
+            flash("Invalid season selected.", "warning")
+            # Regenerate years list
+            current_year = datetime.date.today().year
+            feasible_years = list(range(current_year, current_year + 6))
+            return render_template('admin/term/add_term.html', add_allowed=True, years=feasible_years)
+
+        try:
+            year = int(year_str)
+            start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            end_date = datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date()
+
+            if end_date <= start_date:
+                flash("End Date must be after Start Date.", "danger")
+                # Regenerate years list
+                current_year = datetime.date.today().year
+                feasible_years = list(range(current_year, current_year + 6))
+                return render_template('admin/term/add_term.html', add_allowed=True, years=feasible_years)
+
+        except ValueError:
+            flash("Invalid year or date format.", "danger")
+            # Regenerate years list
+            current_year = datetime.date.today().year
+            feasible_years = list(range(current_year, current_year + 6))
+            return render_template('admin/term/add_term.html', add_allowed=True, years=feasible_years)
+        # --- End Validation ---
+
+        # Construct term name
+        term_name = f"{season} {year}"
+
+        try:
+            # Call the procedure to insert the term
+            db.execute_ddl_and_dml_commands(
+                "CALL insert_academic_term(:name, :start, :end)",
+                {'name': term_name, 'start': start_date, 'end': end_date}
+            )
+            flash(f"Academic Term '{term_name}' added successfully!", "success")
+            return redirect(url_for('add_term')) # Redirect to clear form and re-check status
+
+        except Exception as e:
+            flash(f"Error adding academic term: {str(e)}", "danger")
+            app.logger.error(f"Error calling insert_academic_term: {e}")
+            # Regenerate years list on error
+            current_year = datetime.date.today().year
+            feasible_years = list(range(current_year, current_year + 6))
+            return render_template('admin/term/add_term.html', add_allowed=True, years=feasible_years)
+
+    # Fallback for GET if somehow missed (shouldn't happen with explicit returns)
+    return render_template('admin/term/add_term.html', add_allowed=is_add_allowed)
+
 
 if __name__ == '__main__':
     app.run(debug=True, host='10.32.5.70', port=5000)

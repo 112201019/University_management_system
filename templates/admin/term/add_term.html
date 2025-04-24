@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Add Academic Term</title>
+    <!-- Link to the base style sheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin/style.css') }}" />
+    <!-- Add specific styles for this page -->
+    <style>
+        /* Define CSS variables if not globally available */
+        :root {
+            --primary-color: #007bff;
+            --primary-hover-color: #0056b3;
+            --secondary-color: #6c757d;
+            --secondary-hover-color: #5a6268;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --info-color: #17a2b8;
+            --light-bg-color: #f8f9fa;
+            --border-color: #dee2e6;
+            --text-color: #212529;
+            --text-muted-color: #6c757d;
+            --section-bg-color: #ffffff;
+            --box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            --border-radius: 0.3rem;
+        }
+
+        /* Basic styles for form elements */
+        .add-term-form {
+            margin-top: 1.5rem;
+            padding: 2rem;
+            background-color: var(--section-bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            max-width: 600px; /* Limit form width */
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .form-grid { /* Use grid for layout */
+             display: grid;
+             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+             gap: 1rem 1.5rem; /* Row and column gap */
+             margin-bottom: 1.5rem;
+        }
+        .form-group {
+            /* No margin needed if using grid gap */
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+            color: var(--text-color);
+        }
+        .form-group input[type="date"],
+        .form-group select {
+            width: 100%;
+            padding: 0.6rem 0.8rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            box-sizing: border-box;
+            font-size: 1em;
+        }
+         .form-group select {
+            appearance: none;
+            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23007bff%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
+            background-repeat: no-repeat;
+            background-position: right 0.7em top 50%;
+            background-size: 0.65em auto;
+         }
+
+         .form-group input:focus,
+         .form-group select:focus {
+             border-color: var(--primary-color);
+             outline: none;
+             box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+         }
+
+        /* Submit Button */
+         .submit-button {
+             padding: 0.7rem 1.5rem;
+             background-color: var(--primary-color);
+             color: white;
+             border: none;
+             border-radius: var(--border-radius);
+             cursor: pointer;
+             font-size: 1em;
+             font-weight: 500;
+             transition: background-color 0.2s ease;
+             width: 100%; /* Full width */
+             margin-top: 1rem; /* Space above button */
+         }
+         .submit-button:hover {
+            background-color: var(--primary-hover-color);
+         }
+         .submit-button:disabled {
+              background-color: #ccc;
+              cursor: not-allowed;
+          }
+
+        /* Message Styling */
+        .message { padding: 1rem; margin-bottom: 1.5rem; border: 1px solid transparent; border-radius: var(--border-radius); display: flex; align-items: center; }
+        .message.info { background-color: #e7f3fe; border-color: #d0e3f0; color: #0c5460; }
+        .message.warning { background-color: #fff3cd; border-color: #ffeeba; color: #856404; }
+        .message.danger, .message.error { background-color: #f8d7da; border-color: #f5c6cb; color: #721c24;}
+        .message.success { background-color: #d4edda; border-color: #c3e6cb; color: #155724;}
+
+        /* Back Button Styling */
+         .back-button { display: inline-block; margin-top: 2rem; padding: 0.6rem 1.2rem; background-color: var(--secondary-color); color: white; text-decoration: none; border-radius: var(--border-radius); transition: background-color 0.2s ease; }
+         .back-button:hover { background-color: var(--secondary-hover-color); color: white; }
+
+         /* Disabled info */
+        .disabled-info {
+            padding: 1rem;
+            background-color: #fff3cd; /* Warning background */
+            border: 1px solid var(--warning-color);
+            color: var(--text-color);
+            border-radius: var(--border-radius);
+            text-align: center;
+        }
+
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Add Academic Term</h1>
+        <div class="user-dropdown">
+            <button class="dropdown-btn">
+                <div class="profile-avatar">👤</div>
+                <span class="dropdown-arrow">▼</span>
+            </button>
+            <div class="dropdown-content">
+                <a href="{{ url_for('logout') }}" class="logout-option">
+                    <div class="icon">🚪</div>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                 <div>
+                 {% for category, message in messages %}
+                    <div class="message {{ category or 'info' }}">{{ message }}</div>
+                 {% endfor %}
+                 </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Check if allowed to add -->
+        {% if add_allowed %}
+            <!-- Add Term Form -->
+            <form method="POST" action="{{ url_for('add_term') }}" class="add-term-form">
+                 <p style="text-align: center; color: var(--text-muted-color); margin-bottom: 1.5rem;">
+                    Enter the details for the new academic term. The Term Name will be constructed automatically (e.g., Spring 2026).
+                </p>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="season">Season:</label>
+                        <select id="season" name="season" required>
+                            <option value="" disabled selected>-- Select Season --</option>
+                            <option value="Spring">Spring</option>
+                            <option value="Summer">Summer</option>
+                            <option value="Fall">Fall</option>
+                            <option value="Winter">Winter</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="year">Year:</label>
+                        <select id="year" name="year" required>
+                            <option value="" disabled selected>-- Select Year --</option>
+                            {% for y in years %}
+                                <option value="{{ y }}">{{ y }}</option>
+                            {% else %}
+                                <option value="" disabled>Error loading years</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="start_date">Start Date:</label>
+                        <input type="date" id="start_date" name="start_date" required>
+                    </div>
+
+                     <div class="form-group">
+                        <label for="end_date">End Date:</label>
+                        <input type="date" id="end_date" name="end_date" required>
+                    </div>
+                </div> <!-- End form-grid -->
+
+                <div class="form-group"> <!-- Wrap button -->
+                    <button type="submit" class="submit-button">Add Academic Term</button>
+                </div>
+            </form>
+        {% else %}
+            <!-- Display message if adding is not allowed -->
+             <div class="disabled-info">
+                <p><strong>Term Addition Blocked</strong></p>
+                <p>You can only add a new academic term after the end date of the most recently added term has passed.</p>
+                <p>Please wait until the current period concludes.</p>
+            </div>
+        {% endif %}
+
+
+        <!-- Link back to a dashboard or list -->
+         <div>
+             <a href="{{ url_for('admin_dashboard') or '#' }}" class="back-button">Back to Dashboard</a>
+         </div>
+
+    </div>
+
+    <!-- JavaScript for Dropdown and optional client-side date validation -->
+    <script>
+        // Dropdown JS
+        const dropdownBtn = document.querySelector('.dropdown-btn');
+        const dropdownContent = document.querySelector('.dropdown-content');
+        if (dropdownBtn && dropdownContent) {
+            dropdownBtn.addEventListener('click', () => dropdownContent.classList.toggle('show'));
+            window.addEventListener('click', (event) => {
+                if (!event.target.matches('.dropdown-btn, .dropdown-arrow, .profile-avatar')) {
+                    if (dropdownContent.classList.contains('show')) dropdownContent.classList.remove('show');
+                }
+            });
+        }
+
+        // Optional: Client-side date validation
+        const startDateInput = document.getElementById('start_date');
+        const endDateInput = document.getElementById('end_date');
+
+        function validateDates() {
+            if (startDateInput && endDateInput && startDateInput.value && endDateInput.value) {
+                if (endDateInput.value <= startDateInput.value) {
+                    endDateInput.setCustomValidity('End Date must be after Start Date.');
+                } else {
+                    endDateInput.setCustomValidity(''); // Clear validation message
+                }
+            } else if (endDateInput) {
+                 endDateInput.setCustomValidity(''); // Clear if one field is empty
+            }
+        }
+
+        if (startDateInput && endDateInput) {
+            startDateInput.addEventListener('change', validateDates);
+            endDateInput.addEventListener('change', validateDates);
+        }
+
+    </script>
+</body>
+
+</html>
