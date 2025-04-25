@@ -1422,7 +1422,7 @@ def view_all_students():
         students_query += " WHERE " + " AND ".join(where_clauses)
     
     # Add ordering
-    students_query += " ORDER BY s.studentName"
+    students_query += " ORDER BY s.studentId"
     
     # print(f"DEBUG: Executing query: {students_query}")
     
@@ -1509,6 +1509,7 @@ def view_student(student_id):
     }
     
     return render_template('./admin/student/view_student.html', student=student)
+
 @app.route('/admin_student/edit_student/<int:student_id>')
 def edit_student(student_id):
     degrees = []
@@ -1553,7 +1554,7 @@ def edit_student(student_id):
         if not student_data:
             flash(f"Student with ID {student_id} not found.", "danger")
             return redirect(url_for('view_all_students')) # Ensure this route exists
-
+        print(type(student_id))
         # --- Calculate Achieved Credits ---
         achieved_total_credits = db.execute_dql_commands(
             "SELECT get_student_passed_credits(:sid);", {'sid': student_id}
@@ -1773,7 +1774,7 @@ def view_all_professors():
             pass
     if where:
         prof_sql += " WHERE " + " AND ".join(where)
-    prof_sql += " ORDER BY p.professorName"
+    prof_sql += " ORDER BY p.professorId"
 
     rows = db.execute_dql_commands(prof_sql)
     profs = []

@@ -70,12 +70,12 @@ CREATE TABLE CourseOffering (
   maxCapacity int NOT NULL CHECK (maxCapacity > 0)
 );
 
-CREATE TABLE  (
-  enrollmentI int PRIMARY KEY,
-  studentId it NOT NULL,
-  offeringId nt NOT NULL,
-  enrollmentDate dte NOT NULL,
-  status varcar(20) CHECK (status IN ('Approved', 'Rejected', 'Pending', 'Dropped')),
+CREATE TABLE Enrollment (
+  enrollmentId int PRIMARY KEY,
+  studentId int NOT NULL,
+  offeringId int NOT NULL,
+  enrollmentDate date NOT NULL,
+  status varchar(20) CHECK (status IN ('Approved', 'Rejected', 'Pending', 'Dropped')),
   UNIQUE (studentId, offeringId) -- Prevent duplicate enrollments
 );
 
@@ -94,12 +94,15 @@ ALTER TABLE Courses ADD FOREIGN KEY (departmentId) REFERENCES Department(departm
 ALTER TABLE CourseOffering ADD FOREIGN KEY (courseId) REFERENCES Courses(courseId);
 ALTER TABLE CourseOffering ADD FOREIGN KEY (termId) REFERENCES AcademicTerm(termId);
 ALTER TABLE CourseOffering ADD FOREIGN KEY (professorId) REFERENCES Professors(professorId);
-ALTER TABLE  ADD FOREIGN KEY (studentId) REFERENCES Students(studentId);
-ALTER TABLE ADD FOREIGN KEY (offeringId) REFERENCES CourseOffering(offeringId);
-ALTER TABLE udentGrades ADD FOREIGN KEY (enrollmentId) REFERENCES (enrollmentId);
-NSERT INTO Dgree (degreeId, degreeName, ugPgType, maxYears, totalCreditsRequired, coreCreditsRequired)
-ALUES 
-  (1'B.Tech', 'UG', 4, 160, 100),  (2, 'M.Tech', 'PG', 2, 60, 40);
+ALTER TABLE Enrollment ADD FOREIGN KEY (studentId) REFERENCES Students(studentId);
+ALTER TABLE Enrollment ADD FOREIGN KEY (offeringId) REFERENCES CourseOffering(offeringId);
+ALTER TABLE StudentGrades ADD FOREIGN KEY (enrollmentId) REFERENCES Enrollment(enrollmentId);
+
+
+INSERT INTO Degree (degreeId, degreeName, ugPgType, maxYears, totalCreditsRequired, coreCreditsRequired)
+VALUES 
+  (1, 'B.Tech', 'UG', 4, 160, 100),
+  (2, 'M.Tech', 'PG', 2, 60, 40);
 
 -- 2. Insert Departments (Branches)
 -- headOfDeptId is temporarily set to NULL; we update after inserting professors.
@@ -190,22 +193,25 @@ VALUES
 
 -- 9. Insert Enrollments
 -- Enroll each student in at least one current course offering:
-INSERT INTO  (enrollmentId, studentId, offeringId, enrollmentDate, status)
-VALUES  -- Department 1 current enrollments
-  (500001, 2000001, 4000001, '2025-04-10', 'Approved'),
-  (500002, 2000002, 4000002, '2025-04-10', 'Approved'),
-  (5000003,2000003, 4000003, '2025-04-10', 'Approved'),
-  (500004, 2000004, 4000004, '2025-04-10', 'Approved'),
+INSERT INTO Enrollment (enrollmentId, studentId, offeringId, enrollmentDate, status)
+VALUES
+  -- Department 1 current enrollments
+  (5000001, 2000001, 4000001, '2025-04-10', 'Approved'),
+  (5000002, 2000002, 4000002, '2025-04-10', 'Approved'),
+  (5000003, 2000003, 4000003, '2025-04-10', 'Approved'),
+  (5000004, 2000004, 4000004, '2025-04-10', 'Approved'),
   (5000005, 2000005, 4000005, '2025-04-10', 'Approved'),
   (5000006, 2000006, 4000006, '2025-04-10', 'Approved');
 
 -- Additionally, enroll student 201 in the past term course offering (for a completed course)
-INSERT INTO  (enrollmentId, studentId, offeringId, enrollmentDate, status)
-VALUES  (5000007, 2000001, 4000007, '2024-09-05', 'Approved');
+INSERT INTO Enrollment (enrollmentId, studentId, offeringId, enrollmentDate, status)
+VALUES
+  (5000007, 2000001, 4000007, '2024-09-05', 'Approved');
+
 -- 10. Insert Student Grades for the completed enrollment from the past term
-NSERT INTO StudentGrades (enrollmentId, grade, remarks)
-VALUE
- (5000007, 85.50, 'Good performance'),
+INSERT INTO StudentGrades (enrollmentId, grade, remarks)
+VALUES
+  (5000007, 85.50, 'Good performance'),
   (5000001,  0.00, 'Null'),
   (5000002,  0.00, 'Null'),
   (5000003,  0.00, 'Null'),
@@ -242,14 +248,16 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO student, professor, admin;
 
 -- Professor privileges
 GRANT INSERT ON TABLE CourseOffering TO professor;
-GRANT UPDATE ON TABLE  TO professor;
-GRANT INSERT, UPDATE O TABLE StudentGrades TO professor;
+GRANT UPDATE ON TABLE Enrollment TO professor;
+GRANT INSERT, UPDATE ON TABLE StudentGrades TO professor;
+
 -- Student privileges
-RANT INSERT, UPDATE ON TABLE  TO student;
--- Reoke privileges on UserLogin table for non-admin roles
-VOKE ALL PRIVILEGES ON TABLE UserLogin FROM student, professor;
-RANT SELECT ON TABLE UserLogin TO student, professor;
-GRANTUSAGE ON SCHEMA public TO admin, professor, studnt;
+GRANT INSERT, UPDATE ON TABLE Enrollment TO student;
+
+-- Revoke privileges on UserLogin table for non-admin roles
+REVOKE ALL PRIVILEGES ON TABLE UserLogin FROM student, professor;
+GRANT SELECT ON TABLE UserLogin TO student, professor;
+GRANT USAGE ON SCHEMA public TO admin, professor, student;
 
 
 --admin level functions
@@ -650,17 +658,37 @@ BEGIN
     -- Sum credits from passed courses within the student's department
     SELECT COALESCE(SUM(c.credits), 0)
     INTO total_core_credits
-    FROM  e
-    JOIN tudentGrades sg ON e.enrollmentId = sg.enrollmentId
-    JOIN ourseOffering co ON e.offeringId = co.offeringId
-    JOIN ourses c ON co.courseId = c.courseId
-    WHERE e.stdentId = p_studentId
-      ANDsg.grade >= 50.00 -- Assuming 50 is the passing grade threshold
+    FROM Enrollment e
+    JOIN StudentGrades sg ON e.enrollmentId = sg.enrollmentId
+    JOIN CourseOffering co ON e.offeringId = co.offeringId
+    JOIN Courses c ON co.courseId = c.courseId
+    WHERE e.studentId = p_studentId
+      AND sg.grade >= 50.00 -- Assuming 50 is the passing grade threshold
       AND c.departmentId = v_student_dept_id; -- Core course condition
 
     RETURN total_core_credits;
 END;
 $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION get_student_passed_credits(p_studentId INT)
+RETURNS INT AS $$
+DECLARE
+    total_credits INT;
+BEGIN
+    -- Sum credits from passed courses within the student's department
+    SELECT COALESCE(SUM(c.credits), 0)
+    INTO total_credits
+    FROM Enrollment e
+    JOIN StudentGrades sg ON e.enrollmentId = sg.enrollmentId
+    JOIN CourseOffering co ON e.offeringId = co.offeringId
+    JOIN Courses c ON co.courseId = c.courseId
+    WHERE e.studentId = p_studentId
+      AND sg.grade >= 50.00; -- Assuming 50 is the passing grade threshold
+
+    RETURN total_credits;
+END;
+$$ LANGUAGE plpgsql;
+
 
 --professor level functions
 CREATE OR REPLACE FUNCTION CheckCourseCapacity(p_offering_id INT)
@@ -681,12 +709,13 @@ BEGIN
     
     -- Get the current count of *approved* students
     SELECT COUNT(*) INTO v_current_enrollment
-    FROM 
-    WHEREofferingId = p_offering_id AND status = 'Approved';
-        -- Check if adding one more student exceeds capacity
-    ETURN (v_current_enrollment < v_max_capacity);
+    FROM Enrollment
+    WHERE offeringId = p_offering_id AND status = 'Approved';
+    
+    -- Check if adding one more student exceeds capacity
+    RETURN (v_current_enrollment < v_max_capacity);
 END;
-$$ LNGUAGE plpgql;
+$$ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE FUNCTION AddStudentGradeOnApproval()
@@ -703,27 +732,31 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Drop the trigger if it exists to avoid errors
--- DROP TRIGGER IF EXISTS trg_Enrollment_AfterUpdate_AddGrade ON ;
+-- DROP TRIGGER IF EXISTS trg_Enrollment_AfterUpdate_AddGrade ON Enrollment;
+
 -- Create the trigger
-REATE OR REPLACE TRIGGER trg_Enrollment_AfterUpdate_AddGrade
-FTER UPDATE ON 
-FOR ECH ROWEXECUTE FUNCTION AddStudentGradeOnApproval();
-- Function to calculate the average grade for a course offering
-REATE OR REPLACE FUNCTION GetCourseAverageGrade (p_offering_id INT)
-RETURS DOUBLE PRECISION -- Or NUMERIC for exact precision
-S $$
+CREATE OR REPLACE TRIGGER trg_Enrollment_AfterUpdate_AddGrade
+AFTER UPDATE ON Enrollment
+FOR EACH ROW
+EXECUTE FUNCTION AddStudentGradeOnApproval();
+
+-- Function to calculate the average grade for a course offering
+CREATE OR REPLACE FUNCTION GetCourseAverageGrade (p_offering_id INT)
+RETURNS DOUBLE PRECISION -- Or NUMERIC for exact precision
+AS $$
 DECLARE
     avg_grade DOUBLE PRECISION;
 BEGIN
     SELECT AVG(sg.grade)
     INTO avg_grade
     FROM StudentGrades sg
-    JOIN  e ON sg.enrollmentId = e.enrollmentId
-    WHEREe.offeringId = p_offering_id
-      ANDe.status = 'Approved'
-      ANDsg.grade IS NOT NULL;
+    JOIN Enrollment e ON sg.enrollmentId = e.enrollmentId
+    WHERE e.offeringId = p_offering_id
+      AND e.status = 'Approved'
+      AND sg.grade IS NOT NULL;
 
-    ETURN avg_grade; -- Returns NULL if no non-null grades foundEND;
+    RETURN avg_grade; -- Returns NULL if no non-null grades found
+END;
 $$ LANGUAGE plpgsql;
 
 -- Function to calculate the sample standard deviation for a course offering
@@ -736,12 +769,13 @@ BEGIN
     SELECT STDDEV_SAMP(sg.grade) -- Standard sample deviation
     INTO stddev_grade
     FROM StudentGrades sg
-    JOIN  e ON sg.enrollmentId = e.enrollmentId
-    WHEREe.offeringId = p_offering_id
-      ANDe.status = 'Approved'
-      ANDsg.grade IS NOT NULL;
+    JOIN Enrollment e ON sg.enrollmentId = e.enrollmentId
+    WHERE e.offeringId = p_offering_id
+      AND e.status = 'Approved'
+      AND sg.grade IS NOT NULL;
 
-    ETURN stddev_grade; -- Returns NULL if count is 0 or 1END;
+    RETURN stddev_grade; -- Returns NULL if count is 0 or 1
+END;
 $$ LANGUAGE plpgsql;
 
 -- Function to count graded students (Optional but good practice)
@@ -754,12 +788,13 @@ BEGIN
     SELECT COUNT(sg.grade)
     INTO grade_count
     FROM StudentGrades sg
-    JOIN  e ON sg.enrollmentId = e.enrollmentId
-    WHEREe.offeringId = p_offering_id
-      ANDe.status = 'Approved'
-      ANDsg.grade IS NOT NULL;
+    JOIN Enrollment e ON sg.enrollmentId = e.enrollmentId
+    WHERE e.offeringId = p_offering_id
+      AND e.status = 'Approved'
+      AND sg.grade IS NOT NULL;
 
-    ETURN grade_count;END;
+    RETURN grade_count;
+END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE VIEW vw_ProfessorCourseDetails AS
@@ -773,12 +808,12 @@ SELECT
     p.professorId AS "professorId", 
     c.coursetype AS "courseType",
     e.studentId AS "studentId" 
-FROM  e
-JOIN ourseOffering co ON e.offeringId = co.offeringId
-JOIN ourses c ON co.courseId = c.courseId
-JOIN epartment d ON c.departmentId = d.departmentId
-JOIN AcadeicTerm at ON co.termId = at.termId
-JOIN rofessors p ON co.professorId = p.professorId;
+FROM Enrollment e
+JOIN CourseOffering co ON e.offeringId = co.offeringId
+JOIN Courses c ON co.courseId = c.courseId
+JOIN Department d ON c.departmentId = d.departmentId
+JOIN AcademicTerm at ON co.termId = at.termId
+JOIN Professors p ON co.professorId = p.professorId;
 
 --student level functions
 CREATE OR REPLACE FUNCTION get_registration_log(
@@ -820,12 +855,12 @@ BEGIN
         ELSE 'Elective Course'
       END,
       e.status
-    FROM  e
-    JOIN ourseOffering co ON e.offeringId = co.offeringId
-    JOIN ourses        c  ON co.courseId    = c.courseId
-    JOIN epartment     d  ON c.departmentId = d.departmentId
-    JOIN AcadeicTerm   at ON co.termId       = at.termId
-    JOIN rofessors     p  ON co.professorId  = p.professorId
+    FROM Enrollment e
+    JOIN CourseOffering co ON e.offeringId = co.offeringId
+    JOIN Courses        c  ON co.courseId    = c.courseId
+    JOIN Department     d  ON c.departmentId = d.departmentId
+    JOIN AcademicTerm   at ON co.termId       = at.termId
+    JOIN Professors     p  ON co.professorId  = p.professorId
     WHERE e.studentId = p_student_id
       AND co.termId    = p_term_id;
 END;
@@ -847,12 +882,12 @@ SELECT
     ELSE 'Elective Course'
   END               AS course_type,
   e.status         AS status
-FROM      e
-JOIN tudents       s  ON e.studentId    = s.studentId
-JOIN ourseOffering co ON e.offeringId   = co.offeringId
-JOIN ourses        c  ON co.courseId    = c.courseId
-JOIN Deparment     d  ON c.departmentId = d.departmentId
-JOIN cademicTerm   at ON co.termId       = at.termId
+FROM Enrollment     e
+JOIN Students       s  ON e.studentId    = s.studentId
+JOIN CourseOffering co ON e.offeringId   = co.offeringId
+JOIN Courses        c  ON co.courseId    = c.courseId
+JOIN Department     d  ON c.departmentId = d.departmentId
+JOIN AcademicTerm   at ON co.termId       = at.termId
 JOIN Professors     p  ON co.professorId  = p.professorId;
 
 CREATE OR REPLACE FUNCTION get_approved_courses_from_view(
@@ -938,17 +973,17 @@ BEGIN
         END,
         -- current enrollment status (NULL if never enrolled)
         (SELECT e.status
-           FROM  e
-          WHERE .studentId  = p_student_id
-            AND .offeringId = co.offeringId),
-        -- last erm they passed this course (grade > 35), if any
-        (SELECT at2.trmName
-           FROM    e2
-           JOIN ourseOffering co2 ON e2.offeringId = co2.offeringId
-           JOIN cademicTerm   at2 ON co2.termId     = at2.termId
-           JOIN tudentGrades  sg2 ON e2.enrollmentId = sg2.enrollmentId
-          WHERE e2.stdentId  = p_student_id
-            AND o2.courseId  = c.courseId
+           FROM Enrollment e
+          WHERE e.studentId  = p_student_id
+            AND e.offeringId = co.offeringId),
+        -- last term they passed this course (grade > 35), if any
+        (SELECT at2.termName
+           FROM Enrollment    e2
+           JOIN CourseOffering co2 ON e2.offeringId = co2.offeringId
+           JOIN AcademicTerm   at2 ON co2.termId     = at2.termId
+           JOIN StudentGrades  sg2 ON e2.enrollmentId = sg2.enrollmentId
+          WHERE e2.studentId  = p_student_id
+            AND co2.courseId  = c.courseId
             AND e2.status     = 'Approved'
             AND sg2.grade    > 35
           ORDER BY at2.startDate DESC
@@ -990,12 +1025,12 @@ BEGIN
     -- Sum up all pending credits for the same student and same term
     SELECT COALESCE(SUM(c.credits), 0)
       INTO existing_credits
-    FROM  e
-    JOIN ourseOffering co ON e.offeringId = co.offeringId
-    JOIN ourses c ON co.courseId = c.courseId
-    WHEREe.studentId = NEW.studentId
-      AND e.sttus = 'Pending'
-      ANDco.termId = this_term;
+    FROM Enrollment e
+    JOIN CourseOffering co ON e.offeringId = co.offeringId
+    JOIN Courses c ON co.courseId = c.courseId
+    WHERE e.studentId = NEW.studentId
+      AND e.status = 'Pending'
+      AND co.termId = this_term;
 
     -- Total including the current one
     IF existing_credits + this_credit > 24 THEN
@@ -1009,14 +1044,17 @@ BEGIN
 END;
 $$;
 
--- 2) Attach it as a BEFORE INSERT/UPDATE trigger on 
+-- 2) Attach it as a BEFORE INSERT/UPDATE trigger on Enrollment
+
 CREATE TRIGGER trg_check_pending_credits
- BEFORE INSERT OR UPDATE ON 
- FOR EACH ROW  EXECUTE FUNCTION check_pending_credits();
--- Fuction to check if adding a new term is allowed
- Returns TRUE if allowed, FALSE otherwise
-CREAT OR REPLACE FUNCTION can_add_new_term()
-ETURNS BOOLEAN AS $$
+  BEFORE INSERT OR UPDATE ON Enrollment
+  FOR EACH ROW
+  EXECUTE FUNCTION check_pending_credits();
+
+-- Function to check if adding a new term is allowed
+-- Returns TRUE if allowed, FALSE otherwise
+CREATE OR REPLACE FUNCTION can_add_new_term()
+RETURNS BOOLEAN AS $$
 DECLARE
     v_latest_endDate DATE;
 BEGIN
@@ -1132,7 +1170,7 @@ CREATE OR REPLACE FUNCTION get_term_grades(
   "grade_point"    INT,
   "course_type"    VARCHAR
 ) AS $$
-  SELECT 
+  SELECT
     course_id, course_name, credits, dept_name, professor_name,
     marks, letter_grade, grade_point, course_type
   FROM student_grade_details
@@ -1171,3 +1209,31 @@ CREATE OR REPLACE FUNCTION get_cgpa(
   WHERE student_id = p_student_id
     AND term_id   <= p_term_id
 $$ LANGUAGE sql STABLE;
+
+-- Index for UserLogin table
+CREATE INDEX idx_userlogin_userid_role ON UserLogin USING HASH (userId);
+
+
+-- Indexes for Professors table
+CREATE INDEX idx_professors_departmentid ON Professors USING HASH (departmentId);
+
+-- Indexes for Students table
+CREATE INDEX idx_students_departmentid ON Students USING HASH (departmentId);
+
+-- Indexes for Courses table
+CREATE INDEX idx_courses_departmentid ON Courses USING BTREE (departmentId);
+
+-- Index for AcademicTerm table
+CREATE INDEX idx_academicterm_start_end ON AcademicTerm USING BTREE (startDate, endDate);
+
+-- Indexes for CourseOffering table
+CREATE INDEX idx_courseoffering_courseid ON CourseOffering USING HASH (courseId);
+CREATE INDEX idx_courseoffering_termid ON CourseOffering USING BTREE (termId);
+CREATE INDEX idx_courseoffering_professorid ON CourseOffering USING HASH (professorId);
+
+-- Indexes for Enrollment table
+-- Note: The UNIQUE constraint on (studentId, offeringId) automatically creates a B-tree index.
+-- These are additional indexes for common single-column lookups.
+CREATE INDEX idx_enrollment_studentid ON Enrollment USING HASH (studentId);
+
+-- No additional indexes recommended for Degree or StudentGrades beyond their Primary Keys (which are automatically B-tree indexed).
