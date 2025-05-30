@@ -50,7 +50,38 @@ class PostgresqlDB:
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 if DATABASE_URL:
-    engine = create_engine(DATABASE_URL)
+    class SimpleDB:
+        def __init__(self, database_url):
+            self.engine = create_engine(database_url)
+        
+        def execute_dql_commands(self, stmnt, values=None):
+            try:
+                with self.engine.connect() as conn:
+                    if values is not None:
+                        result = conn.execute(text(stmnt), values)
+                    else:
+                        result = conn.execute(text(stmnt))
+                return result
+            except Exception as err:
+                print(f'Failed to execute dql commands -- {err}')
+        
+        def execute_ddl_and_dml_commands(self, stmnt, values=None):
+            connection = self.engine.connect()
+            trans = connection.begin()
+            try:
+                if values is not None:
+                    result = connection.execute(text(stmnt), values)
+                else:
+                    result = connection.execute(text(stmnt))
+                trans.commit()
+                connection.close()
+                print('Command executed successfully.')
+            except Exception as err:
+                trans.rollback()
+                print(f'Failed to execute ddl and dml commands -- {err}')
+    
+    db = SimpleDB(DATABASE_URL)
+    engine = db.engine
 else:
     USER_NAME = 'postgres'
     PASSWORD = 'postgres'
