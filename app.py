@@ -1,8 +1,9 @@
+import os
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from sqlalchemy import text
 from sqlalchemy.engine import create_engine
-from datetime import date  # Import to get current date
-from psycopg2 import Error as Psycopg2Error  # for catching trigger exceptions
+from datetime import date
+from psycopg2 import Error as Psycopg2Error
 import datetime
 # --- Database Utility Class ---
 class PostgresqlDB:
@@ -46,22 +47,23 @@ class PostgresqlDB:
         except Exception as err:
             trans.rollback()
             print(f'Failed to execute ddl and dml commands -- {err}')
+DATABASE_URL = os.environ.get('DATABASE_URL')
 
-# --- DB Credentials ---
-USER_NAME = 'postgres'
-PASSWORD = 'postgres'
-PORT = 5432
-DATABASE_NAME = 'UMS_final'
-HOST = 'localhost'
-
-# Initialize the database instance
-db = PostgresqlDB(user_name=USER_NAME,
-                  password=PASSWORD,
-                  host=HOST,
-                  port=PORT,
-                  db_name=DATABASE_NAME)
-engine = db.engine
-
+if DATABASE_URL:
+    engine = create_engine(DATABASE_URL)
+else:
+    USER_NAME = 'postgres'
+    PASSWORD = 'postgres'
+    PORT = 5432
+    DATABASE_NAME = 'UMS_final'
+    HOST = 'localhost'
+    
+    db = PostgresqlDB(user_name=USER_NAME,
+                      password=PASSWORD,
+                      host=HOST,
+                      port=PORT,
+                      db_name=DATABASE_NAME)
+    engine = db.engine
 registration_status = {
     'student_enrollment': False,
     'professor_approval': False
@@ -69,7 +71,7 @@ registration_status = {
 
 # --- Flask App Setup ---
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'  # Replace with a secure key in production
+app.secret_key = 'your_secret_key' 
 
 @app.route('/')
 def home():
@@ -2529,5 +2531,8 @@ def add_term():
     return render_template('admin/term/add_term.html', add_allowed=is_add_allowed)
 
 
+# if __name__ == '__main__':
+#     app.run(debug=True)#, host='10.32.5.70', port=5000)
 if __name__ == '__main__':
-    app.run(debug=True)#, host='10.32.5.70', port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
