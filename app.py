@@ -1,9 +1,8 @@
-import os
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from sqlalchemy import text
 from sqlalchemy.engine import create_engine
-from datetime import date
-from psycopg2 import Error as Psycopg2Error
+from datetime import date  # Import to get current date
+from psycopg2 import Error as Psycopg2Error  # for catching trigger exceptions
 import datetime
 # --- Database Utility Class ---
 class PostgresqlDB:
@@ -47,54 +46,22 @@ class PostgresqlDB:
         except Exception as err:
             trans.rollback()
             print(f'Failed to execute ddl and dml commands -- {err}')
-DATABASE_URL = os.environ.get('DATABASE_URL')
 
-if DATABASE_URL:
-    class SimpleDB:
-        def __init__(self, database_url):
-            self.engine = create_engine(database_url)
-        
-        def execute_dql_commands(self, stmnt, values=None):
-            try:
-                with self.engine.connect() as conn:
-                    if values is not None:
-                        result = conn.execute(text(stmnt), values)
-                    else:
-                        result = conn.execute(text(stmnt))
-                return result
-            except Exception as err:
-                print(f'Failed to execute dql commands -- {err}')
-        
-        def execute_ddl_and_dml_commands(self, stmnt, values=None):
-            connection = self.engine.connect()
-            trans = connection.begin()
-            try:
-                if values is not None:
-                    result = connection.execute(text(stmnt), values)
-                else:
-                    result = connection.execute(text(stmnt))
-                trans.commit()
-                connection.close()
-                print('Command executed successfully.')
-            except Exception as err:
-                trans.rollback()
-                print(f'Failed to execute ddl and dml commands -- {err}')
-    
-    db = SimpleDB(DATABASE_URL)
-    engine = db.engine
-else:
-    USER_NAME = 'postgres'
-    PASSWORD = 'postgres'
-    PORT = 5432
-    DATABASE_NAME = 'UMS_final'
-    HOST = 'localhost'
-    
-    db = PostgresqlDB(user_name=USER_NAME,
-                      password=PASSWORD,
-                      host=HOST,
-                      port=PORT,
-                      db_name=DATABASE_NAME)
-    engine = db.engine
+# --- DB Credentials ---
+USER_NAME = 'postgres'
+PASSWORD = 'postgres'
+PORT = 5432
+DATABASE_NAME = 'UMS_final'
+HOST = 'localhost'
+
+# Initialize the database instance
+db = PostgresqlDB(user_name=USER_NAME,
+                  password=PASSWORD,
+                  host=HOST,
+                  port=PORT,
+                  db_name=DATABASE_NAME)
+engine = db.engine
+
 registration_status = {
     'student_enrollment': False,
     'professor_approval': False
@@ -102,7 +69,7 @@ registration_status = {
 
 # --- Flask App Setup ---
 app = Flask(__name__)
-app.secret_key = 'your_secret_key' 
+app.secret_key = 'your_secret_key'  # Replace with a secure key in production
 
 @app.route('/')
 def home():
@@ -131,8 +98,8 @@ def login():
         if row:
             session['role'] = role
             # Set the database role for the current connection
-            # with engine.connect() as conn:
-            #     conn.execute(text(f"SET ROLE {role}"))
+            with engine.connect() as conn:
+                conn.execute(text(f"SET ROLE {role}"))
                 
             # Redirect based on role
             if role == 'admin':
@@ -2562,8 +2529,5 @@ def add_term():
     return render_template('admin/term/add_term.html', add_allowed=is_add_allowed)
 
 
-# if __name__ == '__main__':
-#     app.run(debug=True)#, host='10.32.5.70', port=5000)
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(debug=True)#, host='10.32.5.70', port=5000)
