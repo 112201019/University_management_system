@@ -129,7 +129,7 @@ def login():
         row = result.fetchone()
         
         if row:
-            session['role'] = role
+            # session['role'] = role
             # Set the database role for the current connection
             with engine.connect() as conn:
                 conn.execute(text(f"SET ROLE {role}"))
