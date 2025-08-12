@@ -81,6 +81,11 @@ def login():
         role = request.form.get('role')
         # For this implementation, the username field stores the user ID.
         user_id = request.form.get('user_id')
+        for ele in user_id:
+            if ele not in "0123456789":
+                flash('Invalid credentials')
+                return redirect(url_for('login'))
+            
         password = request.form.get('password')
 
         # Query the UserLogin table for matching credentials
@@ -93,6 +98,8 @@ def login():
             'role': role,
             'password': password
         })
+        
+
         row = result.fetchone()
         
         if row:
